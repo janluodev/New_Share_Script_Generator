@@ -89,31 +89,22 @@ fieldset .btn-row{margin-top:12px}   /* fieldset 内网格与按钮行的间距�
 .guest-row input:focus,.guest-row select:focus{border-color:var(--blue)}
 .btn-sm{height:40px;padding:0 14px;font-size:.88rem;margin-top:12px}
 .btn-del{padding:0;font-size:1.15rem;line-height:1;color:var(--red)}
+.client-block{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+.client-block-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--blue-dark);font-weight:600}
+.client-block-head .btn-del{width:40px;height:40px;margin-top:0}
 
-/* 现场实时辅助 */
-.live-card{padding:20px 22px;margin-bottom:22px}
-.live-card h2{font-size:1.05rem;margin-bottom:10px;color:var(--blue-dark)}
-.muted-sm{color:var(--muted);font-size:.8rem;font-weight:400}
-.live-status{display:flex;gap:8px 18px;flex-wrap:wrap;font-size:.92rem;margin-bottom:12px;padding:10px 14px;background:var(--blue-50);border-radius:8px}
-.live-status b{color:var(--blue-dark)}
-.live-status .st-p2{color:var(--blue-dark);font-weight:600}
-.live-status .st-last{color:#b45309;font-weight:600}
-.live-status .st-end{color:var(--green);font-weight:600}
-.live-status .st-over{color:var(--red);font-weight:600}
-.live-actions{margin-top:12px}
-#liveTable tr.bad td{color:var(--red)}
-#liveTable tr.warn td:last-child{color:#b45309}
-#liveTable td.nums{white-space:normal;min-width:260px}
-.lv{font:inherit;letter-spacing:inherit;border:none;border-bottom:2px solid var(--blue);background:var(--blue-50);border-radius:4px 4px 0 0;color:#FF0000;font-weight:700;text-align:center;padding:0 2px;margin:0 1px}
-.lv:focus{outline:none;background:#fff;border-bottom-color:var(--blue-dark)}
+/* 稿内现场填写 */
+.lv{font:inherit;letter-spacing:inherit;border:none;border-bottom:2px solid #000;background:var(--blue-50);border-radius:4px 4px 0 0;color:#000;font-weight:700;text-align:center;padding:0 2px;margin:0 1px}
+.lv:focus{outline:none;background:#fff;border-bottom-color:#000}
 .lv.dig{width:2.4ch}
-.lv.txt{width:8ch}
 .lv.exp{max-width:100%}
-.lvcomp{border-bottom:2px solid var(--blue);padding:0 2px}
+.live-alert{margin:0 0 12px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:.92rem;color:var(--blue-dark)}
+.live-alert.bad{color:var(--red)}
+.live-alert.warn{color:#b45309}
+.lvcomp{border-bottom:2px solid #000;padding:0 2px}
 .lv-bad{border-bottom-color:var(--red)!important;background:#fee2e2!important}
 .lv-addrow{margin:4px 0}
 .lv-addrow .btn-sm{margin-top:0;border-style:dashed}
-.lookup-head .btn-sm,.live-actions .btn-sm{margin-top:0}   /* flex 行内不再叠加上边距 */
 @media (max-width:600px){
   .guest-row{grid-template-columns:1fr 1fr}
 }
@@ -130,22 +121,23 @@ tr.total td{background:#f8fbff;font-weight:600}
 tr.hidden-step td{color:var(--muted);background:#fafbfd}
 .ok{color:var(--green)}
 
-/* 主持稿正文：逐字复刻模板（红=计算值，绿=提示语），保留原文空格；字体与 UI 统一 */
+/* 主持稿正文：黑白宋体；正文小四、强调四号，预览/打印/Word 共用同一套样式 */
 .script-doc{
   padding:34px 38px;
-  font-family:SimSun,"宋体",serif;   /* 主持稿区域（含页眉/查阅表卡片）统一宋体，与导出 Word 一致 */
+  font-family:SimSun,"宋体","Songti SC",serif;
 }
 .script-doc p{
-  font-size:1.06rem;line-height:2;   /* 屏幕预览：字号/行距保持旧版（导出 Word/PDF 为五号/1.0，见 @media print） */
-  letter-spacing:.06em;              /* 字距（左右）统一为项目现有值 */
+  font-size:12pt;line-height:1.0;
+  letter-spacing:.06em;
   white-space:pre-wrap;
   overflow-wrap:anywhere;      /* 长下划线/空格串在窄屏可折行，防横向溢出 */
-  margin:0;
+  margin:0 0 4pt;              /* 单倍行距，段后 4pt＝Word w:after=80twips */
 }
-.script-doc .v{color:#FF0000;font-weight:700}   /* 填入/计算值：红色加粗 */
-.script-doc .b{font-weight:700}                 /* 加粗黑：摇号机号等 */
-.script-doc .g{color:#228B22;font-style:italic} /* 现场提示语：绿色斜体 */
-.script-doc .m{color:#94a3b8}
+.script-doc .v{color:#000;font-size:14pt;font-weight:700}   /* 填入/计算值：黑色四号加粗 */
+.script-doc .v.u{text-decoration:underline}                 /* 仅参考稿指定类别加下划线 */
+.script-doc .b{color:#000;font-size:14pt;font-weight:700;text-decoration:underline} /* 机号与倒数位次 */
+.script-doc .g{color:#000;font-size:12pt;font-style:italic} /* 原现场提示语：黑色小四斜体 */
+.script-doc .m{color:#000;font-size:12pt}
 
 .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
@@ -158,26 +150,18 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   .lv-addrow{display:none}
 }
 
-/* 页眉块（预览顶部一次 + 打印每页重复）：左对齐三行速查表 + 红字配号总数（首位大两号加粗） */
-.page-header{text-align:left;font-size:1.06rem;line-height:1.4;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:12px}
-.page-header .v{color:#FF0000;font-weight:700}
-.page-header .big{font-size:1.333em;font-weight:700}   /* 配号总数首位：大两号（五号→四号比例） */
+/* 页眉块（预览顶部一次 + 打印每页重复）：左对齐三行速查 + 配号总数（首位三号加粗） */
+.page-header{text-align:left;font-size:12pt;line-height:1.4;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:12px}
+.page-header .v{color:#000;font-weight:700}
+.page-header .big{font-size:16pt;font-weight:700}   /* 配号总数首位：小四→三号 */
 /* 打印逐页页眉：真实 <table><thead> 结构（Chrome 打印每页重复 thead 并预留位置；CSS display 模拟不重复，勿改回） */
 .print-table{width:100%;border-collapse:collapse;table-layout:fixed;white-space:normal}   /* fixed：列宽由容器定，窄屏不横向撑开；normal：覆盖全局 table nowrap */
 .print-table td{padding:0;border:none;text-align:left;vertical-align:top}   /* 覆盖全局 td 居中/边框样式 */
-.print-table.pb tbody p{font-size:.9rem}   /* 查阅表：小五（屏幕按比例缩小） */
-/* 查阅表各环节蓝框分节（预览与打印一致；Word 侧用段落边框合并实现） */
+/* 主稿各环节蓝框分节（预览与打印一致；Word 侧用段落边框合并实现） */
 .lk-box{border:1.5px solid #2563eb;border-radius:6px;padding:6px 12px;margin:10px 0}
-/* 最后一步记录表格（主持人手写记录用）：数字行/汉字行 × 10 列 */
-.rec-tbl{width:auto;border-collapse:collapse;table-layout:fixed;margin:6px 0;white-space:normal}
-.rec-tbl td{border:1px solid #666;min-width:2.2em;height:1.7em;text-align:center;color:#FF0000;font-weight:700;padding:2px 6px}
-/* 页底固定查阅表卡片 */
-.lookup-card{margin-top:22px}
-.lookup-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
-.lookup-head h2{font-size:1.05rem}
-/* 页眉速查表两行（加千亿/万亿后较长）：打印与 Word 用小五 9pt 保证两行排完；
+/* 页眉速查表三行（1–5、6–10、11–12）：与参考稿一致，正文/打印/Word 均为小四；
    每个“数字→分位”作为不可拆分条目，窄屏只在条目之间折行 */
-.page-header .cheat{font-size:.98rem}
+.page-header .cheat{font-size:12pt}
 .page-header .cheat-label,.page-header .cheat-item{display:inline-block;white-space:nowrap}
 .page-header .cheat-label,.page-header .cheat-indent{width:5em}   /* 标签与缩进同宽，桌面/打印时 6 与 1 精确对齐 */
 .page-header .cheat-item{margin-right:.6em}
@@ -185,10 +169,8 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
 .page-header .cheat-indent{display:inline-block}
 @media print{
   @page{size:A4;margin:25mm}   /* 与 Word 一致：A4、2.5cm 页边距 */
-  .page-header{font-size:10.5pt;background:#fff;padding:4pt 0;border-bottom:1px dashed #bbb;margin:0}
-  .page-header .cheat{font-size:9pt}
-  .print-table.pb{page-break-before:always}   /* 摇号说法查阅表：新起一页（拆表方案，单元格内强制分页不稳，勿改回） */
-  .print-table.pb tbody p{font-size:9pt}   /* 查阅表：小五（与 Word sz 18 一致） */
+  .page-header{font-size:12pt;background:#fff;padding:4pt 0;border-bottom:1px dashed #bbb;margin:0}
+  .page-header .cheat{font-size:12pt}
   .lk-box{margin:8pt 0}
   .lk-box.brk{page-break-before:always;page-break-inside:avoid}   /* 末步蓝框：单独起页并尽量整页展示 */
 }
@@ -216,16 +198,13 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   table{font-size:.8rem}
   th,td{padding:6px 8px}
   .script-doc{padding:18px 14px}
-  .script-doc p{font-size:.92rem;line-height:2}
+  .script-doc p{font-size:12pt;line-height:1.0}
   /* 窄屏速查表按完整条目折行；取消仅适用于桌面单行的第二行缩进 */
   .page-header .cheat{display:flex;flex-wrap:wrap;gap:3px 10px}
   .page-header .cheat-indent{display:none}
   .page-header .cheat-item{margin-right:0}
   /* iOS Safari 对 <16px 输入框聚焦时强制放大页面：移动端输入框统一 16px 防缩放跳动 */
   .input-card input,.input-card select,.script-doc .lv{font-size:16px}
-  /* 记录表格 10 列在窄屏等分收窄，防横向溢出 */
-  .rec-tbl{width:100%}
-  .rec-tbl td{min-width:0;padding:2px 2px;font-size:.8rem}
   .actions{justify-content:stretch}
   .actions .btn{flex:1 1 100%}
 }
@@ -236,8 +215,8 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   .container{max-width:none;padding:0}
   .card{border:none;box-shadow:none;padding:0;margin:0}
   .script-doc{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;
-    font-family:SimSun,"宋体",serif}   /* 打印版式严格对齐导出 Word（SimSun 五号） */
-  .script-doc p{font-size:10.5pt;line-height:1.0;letter-spacing:.06em;margin:0 0 4pt}   /* 段后 4pt = Word w:after=80twips */
+    font-family:SimSun,"宋体","Songti SC",serif}   /* 打印版式严格对齐导出 Word（SimSun 小四） */
+  .script-doc p{font-size:12pt;line-height:1.0;letter-spacing:.06em;margin:0 0 4pt}   /* 段后 4pt = Word w:after=80twips */
 }
 </style>
 </head>
@@ -271,6 +250,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     </div>
     <div class="btn-row">
       <button class="btn ghost" id="pdfBtn" type="button">解析 PDF 并填充</button>
+      <button class="btn ghost" id="applyParseBtn" type="button" style="display:none">应用解析结果</button>
     </div>
     <div class="hint" id="pdfStatus" aria-live="polite">可解析：发行公司、主承销商、网上定价发行量、每号股数/张数、配号总数、中签率。网址抓取受目标站跨域限制，失败时请下载 PDF 后用文件解析。</div>
   </fieldset>
@@ -278,17 +258,10 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     <legend>公司与委托</legend>
     <div class="grid">
       <div class="fld"><label for="fCompany">发行公司全称</label><input id="fCompany" type="text"></div>
-      <div class="fld"><label for="fClient">委托（主承销商）全称</label><input id="fClient" type="text"></div>
     </div>
-  </fieldset>
-  <fieldset>
-    <legend>嘉宾（主承销商）</legend>
-    <div class="grid">
-      <div class="fld"><label for="fClientGuestCo">公司名称（嘉宾所属，留空＝同委托方）</label><input id="fClientGuestCo" type="text"></div>
-    </div>
-    <div id="clientGuestRows"></div>
-    <button class="btn ghost btn-sm" id="addClientGuest" type="button">＋ 增加主承销商嘉宾</button>
-    <div class="hint">摇号环节按编号依次邀请嘉宾：环节1→第1位嘉宾，环节2→第2位，以此类推（顺序＝先发行人后主承销商）；每组最多 2 位，姓名留空以字母代替。</div>
+    <div id="clientBlocks"></div>
+    <div class="btn-row"><button class="btn ghost btn-sm" id="addClient" type="button">＋ 增加主承销商</button></div>
+    <div class="hint">每家主承销商均可填写公司及最多 2 位嘉宾；摇号按“发行人 → 主承销商 1 → 主承销商 2……”顺序邀请嘉宾，姓名留空以字母代替。</div>
   </fieldset>
   <fieldset>
     <legend>嘉宾（发行人，可选）</legend>
@@ -320,11 +293,9 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   </fieldset>
   <div class="btn-row">
     <button class="btn" id="genBtn" type="button">生成主持稿</button>
-    <button class="btn ghost" id="resetBtn" type="button">恢复电科思仪示例（新股）</button>
-    <button class="btn ghost" id="resetBtn2" type="button">强达电路示例（可转债）</button>
   </div>
   <div class="error" id="errorBox" role="alert"></div>
-  <div class="hint">深圳证券信息有限公司为固定承办单位；摇号结果一律留白（下划线）供现场填写；<span style="color:#FF0000">红色＝自动计算填入</span>，<span style="color:#228B22">绿色＝现场提示语（保留模板原样）</span>，<span style="color:#94a3b8">灰色＝生成器辅助指引（可按需删改）</span>。</div>
+  <div class="hint">深圳证券信息有限公司为固定承办单位；摇号结果一律留白（下划线）供现场填写；黑色四号加粗＝自动计算填入及强调内容，黑色小四斜体＝现场提示语。</div>
 </section>
 
 <section id="outputArea" style="display:none">
@@ -333,12 +304,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     <div class="table-wrap"><table id="overviewTable"></table></div>
     <div class="note" id="overviewNote"></div>
   </div>
-  <div class="card live-card no-print" id="liveCard" style="display:none">
-    <h2>现场摇号记录<span class="muted-sm">（填写稿中摇号数字后实时更新）</span></h2>
-    <div class="live-status" id="liveStatus" aria-live="polite"></div>
-    <div class="table-wrap"><table id="liveTable"></table></div>
-    <div class="live-actions"><button class="btn ghost btn-sm" id="liveClearBtn" type="button">清空已填写</button></div>
-  </div>
+  <div id="liveAlert" class="live-alert no-print" style="display:none" aria-live="polite"></div>
   <div class="card script-doc" id="scriptDoc"></div>
   <div class="actions no-print">
     <button class="btn ghost" id="copyBtn" type="button">一键复制全文</button>
@@ -346,15 +312,6 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     <button class="btn ghost" id="printBtn" type="button">打印 / 导出 PDF</button>
   </div>
   <div class="hint wx-hint no-print" id="wxHint" style="display:none"></div>
-</section>
-
-<!-- 摇号说法查阅表：固定模板（不随主持稿导出），页面底部常驻，可单独导出 Word -->
-<section class="card script-doc lookup-card no-print" id="lookupCard">
-  <div class="lookup-head no-print">
-    <h2>摇号说法查阅表<span class="muted-sm">（临场应变参考 · 固定模板，不包含在主持稿导出中）</span></h2>
-    <button class="btn ghost btn-sm" id="lookupDocxBtn" type="button">导出查阅表 Word（.docx）</button>
-  </div>
-  <div id="lookupDoc"></div>
 </section>
 
 <div class="wx-mask no-print" id="wxMask" style="display:none" role="dialog" aria-modal="true" aria-labelledby="wxTitle">
@@ -731,14 +688,19 @@ function resolvePdfUrl(raw){
 }
 
 /* PDF 提取文本常带换行与字间空格（如"配 号 总 数 为"），行内空格全去、行再拼接；
-   1~2 位纯数字行视为页码剔除，防止跨页拼接时页码粘进正文数字（如"中签率为[页码3]0.0008…"） */
+   1~2 位纯数字行通常视为页码剔除，但若前后行也是数字/数字结尾则视为长数碎片保留，防误删配号 */
 function normalizePdfText(raw){
   var lines = String(raw || '').split(/\r?\n/);
   var kept = [];
   for(var i = 0; i < lines.length; i++){
     var t = lines[i].replace(/\s+/g, '');
     if(!t) continue;
-    if(/^\d{1,2}$/.test(t)) continue;
+    if(/^\d{1,2}$/.test(t)){
+      var prev = (lines[i - 1] || '').replace(/\s+/g, '');
+      var next = (lines[i + 1] || '').replace(/\s+/g, '');
+      var continuation = /[\d,]$/.test(prev) && /^(?:\d|个)/.test(next);
+      if(!continuation) continue;
+    }
     kept.push(t);
   }
   return kept.join('');
@@ -769,30 +731,54 @@ function parseAnnouncement(rawText){
                 cap(/([^，。；：、]{4,50}?(?:股份有限公司|有限责任公司|股份公司|有限公司))(?:向不特定对象|公开)发行可转换公司债券/);
   if(company) fields.company = company; else missing.push('发行公司全称');
 
-  /* 主承销商：依次尝试 （联席）保荐人（（联席）主承销商）：→ 保荐人（主承销商）：→ 主承销商：→ 头部留白版式
-     （名称在"以下简称"保荐人（主承销商）"之前）；公司名可含全角括号（如"易思维（杭州）科技股份有限公司"）；
-     捕获含"特别提示/公告"等杂质的视为误捕继续下一条 */
-  var CLIENT_RULES = [
-    /(?:联席)?保荐人[（(](?:联席)?主承销商[）)][：:]([^，。；：、]{4,50}?(?:股份有限公司|有限责任公司|股份公司|有限公司))/,
-    /主承销商[：:]([^，。；：、]{4,50}?(?:股份有限公司|有限责任公司|股份公司|有限公司))/,
-    /(?:和|与|及)?([^，。；：、]{4,50}?(?:股份有限公司|有限责任公司|股份公司|有限公司))（以下简称["“]?保荐人[（(]主承销商[）)]/
-  ];
-  for(var ci = 0; ci < CLIENT_RULES.length; ci++){
-    var chit = text.match(CLIENT_RULES[ci]);
-    if(chit){
-      var cname = chit[1].replace(/^[和与及、，]/, '');
-      if(!/特别提示|董事会|公告/.test(cname)){ fields.client = cname; break; }
+  /* 主承销商：按角色顺序收集全部公司并去重（保荐人/保荐机构优先于独立联席），支持顿号或“和/与/及”列举、
+     有限责任公司/股份公司/股份有限公司/有限公司，以及盖章页重复；fields.client 保留第一家供旧逻辑使用 */
+  var clientList = [], clientSeen = {};
+  function addClient(name, index, priority){
+    var cname = String(name || '').replace(/^[和与及、，\s]+/, '').trim();
+    if(!cname || /特别提示|董事会|公告/.test(cname) || clientSeen[cname]) return;
+    clientSeen[cname] = true;
+    clientList.push({name:cname, index:index, priority:priority});
+  }
+  function addClientsFromSegment(seg, index, priority){
+    /* 只在当前标签所在句内取公司，避免把发行人或下一段说明文字误捕为承销商 */
+    var cut = seg.search(/[。；]|(?:联席)?保荐人[（(](?:联席)?主承销商[）)][：:]|(?:联席)?保荐机构[（(](?:联席)?主承销商[）)][：:]|联席主承销商[：:]|主承销商[：:]|特别提示/);
+    if(cut > 0) seg = seg.slice(0, cut);
+    var parts = seg.replace(/(股份有限公司|有限责任公司|股份公司|有限公司)[、和与及]/g, '$1|').split('|');
+    for(var pi = 0; pi < parts.length; pi++){
+      var hit = parts[pi].match(/([^，。；：、|]{4,60}?(?:股份有限公司|有限责任公司|股份公司|有限公司))/);
+      if(hit) addClient(hit[1], index + pi, priority);
     }
   }
-  if(!fields.client) missing.push('主承销商全称');
+  var CLIENT_LABELS = [
+    /(?:联席)?保荐人[（(](?:联席)?主承销商[）)][：:]/g,
+    /(?:联席)?保荐机构[（(](?:联席)?主承销商[）)][：:]/g,
+    /联席主承销商[：:]/g,
+    /(?<!副)主承销商[：:]/g
+  ];
+  for(var ci = 0; ci < CLIENT_LABELS.length; ci++){
+    var re = CLIENT_LABELS[ci], lm;
+    while((lm = re.exec(text))){
+      addClientsFromSegment(text.slice(re.lastIndex, re.lastIndex + 240), lm.index, ci);
+    }
+  }
+  if(!clientList.length){
+    /* 头部留白版式：公司名在“以下简称‘保荐人（主承销商）’”之前 */
+    var chit = text.match(/(?:和|与|及)?([^，。；：、]{4,60}?(?:股份有限公司|有限责任公司|股份公司|有限公司))（以下简称["“]?保荐人[（(]主承销商[）)]/);
+    if(chit) addClient(chit[1], chit.index, 0);
+  }
+  clientList.sort(function(a, b){ return a.priority - b.priority || a.index - b.index; });
+  fields.clients = clientList.map(function(c){ return c.name; });
+  if(fields.clients.length) fields.client = fields.clients[0];
+  else missing.push('主承销商全称');
 
   /* 网上定价发行量：优先回拨后"网上最终发行数量"；可转债深市以"张"、沪市以"手"计；
      版式差异：股数可能以"万股"（457.8000 万股）或纯"股"（12,497,000 股）表述；
-     可转债为"总计为/共/为 X 张（手）"、"Y 元（X 张/手）"或"Y 元，即 X 张"（瑞鹄模具式）表述；
-     含"有效申购"字样的句子是申购量而非发行量，一律跳过 */
+     可转债为"总计为/共/为 X 张（手）"、"Y 元（X 张/手）"或"(为)Y(万)元，即 X 张"（瑞鹄模具式）表述；
+     含"有效申购"字样的句子是申购量而非发行量，逐条跳过并继续向后匹配 */
   var issueRules = [
     {re:/网上最终发行数量[为：:]?([\d,]+(?:\.\d+)?)(万)?股/, unit:'股'},
-    {re:/网上向(?:一般)?社会公众投资者(?:发行|发售)[^，。;；]{0,50}?为[\d,]+(?:\.\d+)?元，?即([\d,]+)\s*(张|手)/, unit:null, unitIdx:2},
+    {re:/网上向(?:一般)?社会公众投资者(?:发行|发售)[^，。;；]{0,50}?(?:为)?[\d,]+(?:\.\d+)?(?:万)?元，?即([\d,]+)\s*(张|手)/, unit:null, unitIdx:2},
     {re:/网上向(?:一般)?社会公众投资者(?:发行|发售)[^，。;；]{0,50}?元[（(]([\d,]+)\s*(张|手)[）)]/, unit:null, unitIdx:2},
     {re:/网上向(?:一般)?社会公众投资者(?:发行|发售)[^，。;；]{0,40}?(?:总计|共|为)[为：:]?([\d,]+(?:\.\d+)?)(张|手)/, unit:null, unitIdx:2},
     {re:/网上初始发行数量[为：:]?([\d,]+(?:\.\d+)?)(万)?股/, unit:'股'},
@@ -800,11 +786,11 @@ function parseAnnouncement(rawText){
     {re:/网上发行(?:数量|股数)[为：:]?([\d,]+(?:\.\d+)?)(万)?股/, unit:'股'}
   ];
   for(var i = 0; i < issueRules.length; i++){
-    var hit = text.match(issueRules[i].re);
-    if(hit && /有效申购/.test(hit[0])) continue;   /* 申购量句误捕跳过（如瑞鹄模具公告） */
-    if(hit){
+    var re = new RegExp(issueRules[i].re.source, 'g'), hit;
+    while((hit = re.exec(text))){
+      if(/有效申购/.test(hit[0])) continue;
       var v = hit[2] === '万' ? wanToWhole(hit[1]) : cnNum(hit[1]);
-      if(v){ fields.issue = v; fields.issueUnit = issueRules[i].unitIdx ? hit[issueRules[i].unitIdx] : issueRules[i].unit; break; }
+      if(v){ fields.issue = v; fields.issueUnit = issueRules[i].unitIdx ? hit[issueRules[i].unitIdx] : issueRules[i].unit; i = issueRules.length; break; }
     }
   }
   if(!fields.issue) missing.push('网上定价发行量');
@@ -832,19 +818,23 @@ function parseAnnouncement(rawText){
   }
   if(!fields.shares) missing.push('每号股数/张数');
 
-  /* 中签率取值顺序：回拨后/最终 > 网上定价发行 > 网上中签率 > 兜底首个——
-     避免抓到回拨前的"初步中签率"（其值与网上最终发行量不对应） */
+  /* 中签率取值顺序：回拨后/最终 > 网上定价发行 > 网上申购/网上中签率 > 兜底首个——
+     避免抓到回拨前的"初步中签率"或同名网下中签率；兜底命中跳过前 8 字符含"网下/初步"的项 */
   var rate = null;
   var RATE_RULES = [
     /回拨(?:机制启动)?后[^，。;；]{0,25}?中签率[为：:]?(\d+(?:\.\d+)?)[%％]/,
     /网上发行最终中签率[为：:]?(\d+(?:\.\d+)?)[%％]/,
     /网上定价发行的中签率[为：:]?(\d+(?:\.\d+)?)[%％]/,
+    /网上申购中签率[为：:]?(\d+(?:\.\d+)?)[%％]/,
     /网上中签率[为：:]?(\d+(?:\.\d+)?)[%％]/,
     /中签率[为：:]?(\d+(?:\.\d+)?)[%％]/
   ];
   for(var ri = 0; ri < RATE_RULES.length; ri++){
     var rmatch = text.match(RATE_RULES[ri]);
-    if(rmatch){ rate = rmatch[1]; break; }
+    if(!rmatch) continue;
+    if(ri === RATE_RULES.length - 1 && /网下|初步/.test(text.slice(Math.max(0, rmatch.index - 8), rmatch.index))) continue;
+    rate = rmatch[1];
+    break;
   }
   if(rate){
     var pr = parsePercent(rate);
@@ -882,12 +872,10 @@ function prepareData(raw){
   function fail(msg){ return {ok:false, error:msg}; }
   var v = {};
   v.company = (raw.company || '').trim();
-  v.client = (raw.client || '').trim();
   v.office = (raw.office || '').trim();
   v.notary1 = (raw.notary1 || '').trim();
   v.notary2 = (raw.notary2 || '').trim();
   if(!v.company) return fail('请填写发行公司全称');
-  if(!v.client) return fail('请填写委托（主承销商）全称');
   /* 公证处可留空：主持稿对应位置留白（下划线）供现场填写；
      公证员/公证人员空缺时在后文以字母代替（见下方 letter 逻辑） */
   v.office = v.office || '________';
@@ -897,7 +885,7 @@ function prepareData(raw){
   v.kindInline = v.type === 'kzz' ? '可转债发行' : '新股发行';
   v.kindAnnoun = v.type === 'kzz' ? '债券发行' : '新股发行';
 
-  /* 嘉宾：主承销商组 + 发行人组（均可为 0 人）；全空行忽略；姓名可空缺（正文以字母代替） */
+  /* 嘉宾：发行人 + 任意多家主承销商；旧单家字段自动包装为 clients[0]，全空嘉宾行忽略 */
   function parseGuests(rows){
     var out = [];
     for(var i = 0; i < rows.length; i++){
@@ -907,15 +895,24 @@ function prepareData(raw){
     }
     return out;
   }
-  var cg = parseGuests(raw.clientGuests || []);
-  var ig = parseGuests(raw.issuerGuests || []);
-  v.clientGuestCo = (raw.clientGuestCo || '').trim() || v.client;
+  var rawClients = Array.isArray(raw.clients) ? raw.clients : [{client:raw.client, guestCo:raw.clientGuestCo, guests:raw.clientGuests || []}];
+  if(!rawClients.length) return fail('请填写委托（主承销商）全称');
+  var clients = [], ig = parseGuests(raw.issuerGuests || []);
+  for(var ci = 0; ci < rawClients.length; ci++){
+    var rc = rawClients[ci] || {};
+    var cname = (rc.client || '').trim();
+    if(!cname) return fail(ci === 0 ? '请填写委托（主承销商）全称' : '请填写第 ' + (ci + 1) + ' 家主承销商全称');
+    clients.push({client:cname, guestCo:(rc.guestCo || '').trim() || cname, guests:parseGuests(rc.guests || [])});
+  }
   v.issuerGuestCo = (raw.issuerGuestCo || '').trim() || v.company;
 
   /* 介绍与邀请恒在：空缺组自动补 1 位字母嘉宾；人名空缺按出场顺序 A、B、C… 代替
-     （发行人嘉宾 → 主承销商嘉宾 → 公证员 → 公证人员）；职务空缺用角色名（发行人代表/主承销商代表） */
+     （发行人 → 各承销商 → 公证员 → 公证人员）；职务空缺才用角色名，填写职务时原样展示 */
   var letterN = 0;
-  function letter(){ return String.fromCharCode(65 + (letterN++ % 26)); }
+  function letter(){
+    var n = letterN++;
+    return n < 26 ? String.fromCharCode(65 + n) : String.fromCharCode(65 + Math.floor(n / 26 - 1), 65 + n % 26);
+  }
   function fillGuest(g, role){
     if(!g.title) g.title = role;
     if(!g.name) g.name = letter();
@@ -923,11 +920,16 @@ function prepareData(raw){
   }
   if(!ig.length) ig.push({title:'发行人代表', name:letter(), honor:'先生'});
   else ig.forEach(function(g){ fillGuest(g, '发行人代表'); });
-  if(!cg.length) cg.push({title:'主承销商代表', name:letter(), honor:'先生'});
-  else cg.forEach(function(g){ fillGuest(g, '主承销商代表'); });
-  v.clientGuests = cg;
+  clients.forEach(function(c){
+    if(!c.guests.length) c.guests.push({title:'主承销商代表', name:letter(), honor:'先生'});
+    else c.guests.forEach(function(g){ fillGuest(g, '主承销商代表'); });
+  });
+  v.clients = clients;
   v.issuerGuests = ig;
-  v.guests = ig.concat(cg);   /* 环节分配顺序：环节1→发行人嘉宾，其后主承销商嘉宾 */
+  v.guests = ig.map(function(g){ return {client:v.issuerGuestCo, title:g.title, name:g.name, honor:g.honor}; });
+  clients.forEach(function(c){
+    c.guests.forEach(function(g){ v.guests.push({client:c.guestCo, title:g.title, name:g.name, honor:g.honor}); });
+  });
   if(!v.notary1) v.notary1 = letter();
   if(!v.notary2) v.notary2 = letter();
 
@@ -955,7 +957,7 @@ function prepareData(raw){
     v.winCount = String(Math.round(Number(v.issue) / Number(v.shares)));
     v.winAuto = true;
   }
-  if(Number(v.winCount) <= 0) return fail('号码中签数计算结果须大于 0，请检查发行量与每号股数');
+  if(Number(v.winCount) <= 0) return fail('号码中签数计算结果须大于 0，请检查发行量与每号' + v.unit + '数');
 
   v.rangeLower = '0000，0000，0001';
   var rg = (raw.range || '').trim();
@@ -988,24 +990,22 @@ function numberSteps(shown){
   return {labels:labels};
 }
 
-/* ============ 文档构建（段落 = run 数组；run={t:文本, c:'r'红|'g'绿|无}） ============ */
+/* ============ 文档构建（段落 = run 数组；run={t:文本, c:'r'强调|'g'斜体|'b'机号位次|无}） ============ */
 
-function B(t){ return {t:t}; }
-function R(t){ return {t:t, c:'r'}; }
-function BD(t){ return {t:t, c:'b'}; }   /* 加粗黑：摇号机号等需要加粗但不标红的数字 */
+function B(t){ return {t:t}; }   /* 黑色小四普通正文 */
+function R(t, underline){ return {t:t, c:'r', u:underline !== false}; }   /* 黑色四号加粗；默认下划线 */
+function BD(t){ return {t:t, c:'b'}; }   /* 黑色四号加粗并加下划线：摇号机号与倒数位次 */
 function G(t){
-  /* 绿色文字统一加括号（括号同绿）；已带括号的跳过 */
+  /* 黑色小四斜体：统一加括号（括号同样式）；已带括号的跳过 */
   if(!/^[(（]/.test(t) && !/[)）]$/.test(t)) t = '（' + t + '）';
   return {t:t, c:'g'};
 }
-function M(t){ return {t:t, c:'m'}; }   /* 灰色：生成器辅助指引（可按需删改） */
-
 /* live run：可填写/自动计算的空白位。kind: digit 单位数字 | num 号码 | text 自由文本 | comp 计算值；
-   blank = 空白时渲染的下划线数量（与原模板逐字一致）；extra 附带 N/pos/r 等元数据 */
+   blank = 空白时渲染的下划线数量（与原模板逐字一致）；extra 附带 N/pos/r/u 等元数据，默认不下划线 */
 function LV(id, kind, blank, extra){
   var live = {id:id, kind:kind, blank:blank};
   if(extra) for(var k in extra) live[k] = extra[k];
-  return {t:'', c:'r', live:live};
+  return {t:'', c:'r', u:!!(extra && extra.u === true), live:live};
 }
 /* 加轮按钮占位段：预览渲染为按钮行，文本/Word 导出时整段跳过 */
 function ADDBTN(where){ return [{t:'', live:{kind:'addBtn', where:where}}]; }
@@ -1017,8 +1017,8 @@ function passParas(N, guest, lp, dropHint){
   var passes = drawPasses(N);
   passes.forEach(function(ps, i){
     var intro = [B(ps.conn + ' '), BD(ps.machines.join('、')), B('号机 ' +
-      (ps.machines.length > 1 ? '分别摇出' : '摇出') +
-      ' 此组号码的 倒数第' + ps.digits.join('、') + '位， ')];   /* 机号加粗黑（intro 为 run 数组） */
+      (ps.machines.length > 1 ? '分别摇出' : '摇出') + ' 此组号码的 倒数第'),
+      BD(ps.digits.join('、')), B('位， ')];   /* 机号与倒数位次均为黑色四号加粗下划线 */
     if(i === 0){
       out.push(intro);
       if(guest){
@@ -1033,7 +1033,7 @@ function passParas(N, guest, lp, dropHint){
     }
     var runs = [B('号码已经产生，')];
     ps.digits.forEach(function(d, di){
-      runs.push(B('倒数第' + d + '位号码是'));
+      runs.push(B('倒数第'), BD(String(d)), B('位号码是'));
       runs.push(lp ? LV(lp + 'd' + d, 'digit', 3, {N:N, pos:d}) : B('___'));
       runs.push(B(di < ps.digits.length - 1 ? '，' : '。'));
     });
@@ -1045,17 +1045,17 @@ function passParas(N, guest, lp, dropHint){
 
 /* 结果行：m=1 为单号型，m>1 为基本号+递增型；lp 非空时号码位可填写（自动同步/可手工钉住） */
 function resultPara(N, m, liang, lp){
-  var numRun = lp ? LV(lp + 'num', 'num', 12, {N:N}) : R('____________');
+  var numRun = lp ? LV(lp + 'num', 'num', 12, {N:N}) : R('____________', false);
   if(m === 1){
-    return [R(N + ' 位数 的中签号码已经产生，是'), numRun, B(' '), G('（根据显示屏读出）')];
+    return [R(N + ' 位数 的中签号码已经产生，是', false), numRun, B(' '), G('（根据显示屏读出）')];
   }
-  return [R(N + ' 位数 的基本中签号码已经产生，是'), numRun, B(' '), G('（根据显示屏读出）'), B(' '),
-    R('根据电脑程序计算显示，递增或递减  ' + liang + ' ，得到另外  ' + (m - 1) + ' 个中签号码是'),
-    lp ? LV(lp + 'exp', 'num', 44, {N:N, exp:1, m:m}) : R('____________________________________________')];
+  return [R(N + ' 位数 的基本中签号码已经产生，是', false), numRun, B(' '), G('（根据显示屏读出）'), B(' '),
+    R('根据电脑程序计算显示，递增或递减  ' + liang + ' ，得到另外  ' + (m - 1) + ' 个中签号码是', false),
+    lp ? LV(lp + 'exp', 'num', 44, {N:N, exp:1, m:m}) : R('____________________________________________', false)];
 }
 
 function fanPara(N){
-  return [R('凡申购号码 末  ' + N + ' 位数 与以上产生的号码相同 即中签。')];
+  return [R('凡申购号码 末  ' + N + ' 位数 与以上产生的号码相同 即中签。', false)];
 }
 
 /* 环节话术句 */
@@ -1090,9 +1090,9 @@ function openerParas(st, part){
   return [[B('下面我们摇出 '), R(dn + ' 分之  ' + pb.m), B(' 的中签号码，'), R(tail)]];
 }
 
-/* 最后一步单轮段落（lp=live 前缀）：单流程精简版（中科润宇修改版）——
-   三条绿斜体情形行覆盖大于/小于等于/只剩一个可选号码；放球句与念球提示各独立成行；
-   记录表格一张（在"倒数第X位已经产生"之后）；次数注释恢复（在完整号码产生句之前） */
+/* 最后一步单轮段落（lp=live 前缀）：单流程精简版——
+   三条黑色斜体情形行覆盖大于/小于等于/只剩一个可选号码；情形中的 N 直接替换为配号首位；
+   次数在每轮开头与完整号码产生句之前各出现一次；不再附带主持人记录表格 */
 function lastRoundParas(v, r){
   var D = v.D;
   var balls = [];
@@ -1100,113 +1100,30 @@ function lastRoundParas(v, r){
   var ballsCn = balls.map(function(b){ return CN_DIGITS[Number(b)]; });
   var lp = 'last_' + r;
   var out = [];
-  out.push([R('下面我们摇出  第'), LV(lp + '_idx', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码。')]);
+  out.push([]);
+  out.push([G('次数：1、 2、 3、 4、 5、 6、 7、 8、 9')]);
+  out.push([]);
+  out.push([R('下面我们摇出  第'), LV(lp + '_idx', 'comp', 5, {r:r, u:true}), R('个（最后一个）  ' + D + ' 位数的中签号码。')]);
   passParas(D - 1, null, lp, true).forEach(function(p){ out.push(p); });
-  out.push([R(D + ' 位数的后  ' + (D - 1) + ' 位号码已经产生，是'), LV(lp + 'tail', 'num', 12, {N:D - 1})]);
+  out.push([R(D + ' 位数的后  ' + (D - 1) + ' 位号码已经产生，是', false), LV(lp + 'tail', 'num', 12, {N:D - 1})]);
   out.push([]);
   out.push([B('由于'), R('大于（小于）'), B(' 配号总数的后 '), R(String(D - 1)), B(' 位数 '), R(v.lastDigits)]);
   out.push([]);
-  out.push([G('（大于的情况下：使用号球 0～N-1）')]);
-  out.push([G('（小于或等于的情况下：使用号球 0～N）')]);
-  out.push([G('（只剩下一个可选号码：'), B(' '), R('系统自动分配 倒数第  ' + D + ' 位号码为 '), LV(lp + 'assign', 'num', 5, {N:1}), B('  '), G('）')]);
-  out.push([]);   /* 情形行与放球句之间空行（宁波润禾修改版） */
-  out.push([B('请工作人员将1号机的全部号码球取出，将以下号码球放入摇号机中：')]);
+  out.push([G('（大于的情况下：使用号球 0～' + (Number(v.firstDigit) - 1) + '）')]);
+  out.push([G('（小于或等于的情况下：使用号球 0～' + v.firstDigit + '）')]);
+  out.push([G('（只剩下一个可选号码：'), B(' '), R('系统自动分配 倒数第  ' + D + ' 位号码为 ', false), LV(lp + 'assign', 'num', 5, {N:1}), B('  '), G('）')]);
+  out.push([]);   /* 情形行与放球句之间空行 */
+  out.push([B('请工作人员将'), BD('1'), B('号机的全部号码球取出，将以下号码球放入摇号机中：')]);
   out.push([G('（连续的数字念：“几至几”，随后再配合礼仪用汉字单独念一遍）')]);
-  out.push([R(balls.join('、'))]);              /* 数字球号行（0～首位，顶格左对齐） */
-  out.push([R(ballsCn.join('、'))]);            /* 汉字球号行 */
-  out.push([B('请由'), BD('1'), B('号机摇出倒数第 '), R(String(D)), B(' 位的号码   '), G('（留意摇号情况）')]);   /* 机号加粗黑 */
-  out.push([B('倒数第 '), R(String(D)), B(' 位号码已经产生，是'), LV(lp + 'lead', 'num', 15, {N:1})]);
-  out.push([]);   /* 摇出结果与记录表格之间空行 */
-  out.push([G('（此表格供主持人记录）')]);
-  out.push([{t:'', tbl:{digits:balls, cn:ballsCn}}]);   /* 记录表格：2 行×10 列，空列供现场记录 */
-  out.push([]);   /* 记录表格与次数注释之间空行 */
+  out.push([R(balls.join('、'), false)]);        /* 数字球号行（0～首位，顶格左对齐） */
+  out.push([R(ballsCn.join('、'), false)]);      /* 汉字球号行 */
+  out.push([B('请由'), BD('1'), B('号机摇出倒数第 '), R(String(D)), B(' 位的号码   '), G('（留意摇号情况）')]);
+  out.push([B('倒数第 '), R(String(D), false), B(' 位号码已经产生，是'), LV(lp + 'lead', 'num', 15, {N:1})]);
+  out.push([]);
   out.push([G('次数：1、 2、 3、 4、 5、 6、 7、 8、 9')]);
-  out.push([]);   /* 次数注释与完整号码产生句之间空行 */
-  out.push([R('第'), LV(lp + '_idx2', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码已经产生，是'), LV(lp + 'final', 'num', 22, {N:D})]);
   out.push([]);
-  return out;
-}
-
-/* 《摇号说法查阅表（临场应变参考）》：整段标准说法、数字留空；配色标准——念出来的正文黑色、
-   不念出但需提醒注意的标绿括号斜体、指引性内容标灰（"用法"整块灰）；
-   固定模板：页面底部常驻、可单独导出（不随主持稿导出；导出时小五字、页眉仅速查表）；
-   主标题黑（pb 标记：导出 docx 时标记小五段起点）；摇号过程 1～9 位通用说辞在最前展示一次 */
-function lookupParas(){
-  /* 通用摇号环节标准说辞（1～9 位完整；机次位次照电脑屏幕顺推，摇完即止） */
-  function lkPass(){
-    return [
-      [B('首先由 '), BD('1、2、3'), B('号机 分别摇出 此组号码的 倒数第1、2、3位， 请开始摇号'), G('（留意摇号情况）')],
-      [B('号码已经产生，倒数第1位号码是____，倒数第2位号码是____，倒数第3位号码是____。')],
-      [B('下面由 '), BD('1、2、3'), B('号机 分别摇出 此组号码的 倒数第4、5、6位， 请开始摇号'), G('（留意摇号情况）')],
-      [B('号码已经产生，倒数第4位号码是____，倒数第5位号码是____，倒数第6位号码是____。')],
-      [B('再由 '), BD('1、2、3'), B('号机 分别摇出 此组号码的 倒数第7、8、9位， 请开始摇号'), G('（留意摇号情况）')],
-      [B('号码已经产生，倒数第7位号码是____，倒数第8位号码是____，倒数第9位号码是____。')]
-    ];
-  }
-  /* 把一段（环节）标记为蓝框：'s'段首/'m'段中/'e'段尾/'solo'单段（预览/打印包 div.lk-box；Word 用 pBdr 相邻合并） */
-  function boxed(paras){
-    paras.forEach(function(p, i){
-      p.box = paras.length === 1 ? 'solo' : i === 0 ? 's' : i === paras.length - 1 ? 'e' : 'm';
-    });
-    return paras;
-  }
-  var out = [
-    [{t:'【摇号说法查阅表（临场应变参考）】', pb:true}],
-    [M('用法：现场情形与计划不一致时，找到对应情形的那一段，照着念，并把电脑屏幕上显示的数字填入空格。摇号顺序均为：先摇个位、再摇十位、再摇百位，每轮至多 3 台摇号机；位数更多时按同样方式继续，位数更少时摇完即止；机次与位次一切以电脑显示屏为准。')],
-    []
-  ];
-  boxed([[G('通用摇号环节（各环节的摇号过程均照此说辞）')]].concat(lkPass())).forEach(function(p){ out.push(p); });
+  out.push([R('第', false), LV(lp + '_idx2', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码已经产生，是', false), LV(lp + 'final', 'num', 22, {N:D})]);
   out.push([]);
-  boxed([
-    [G('一、正常环节（只摇一个号码）')],
-    [B('下面我们摇出 ____ 分之 1 的中签号码，摇出一个 ____ 位数 的中签号码。')],
-    [G('（此处进入通用摇号环节）')],
-    [B('____ 位数 的中签号码已经产生，是____________ '), G('（根据显示屏读出）')],
-    [B('凡申购号码 末 ____ 位数 与以上产生的号码相同 即中签。')]
-  ]).forEach(function(p){ out.push(p); });
-  out.push([]);
-  boxed([
-    [G('二、正常环节（一个基本号码＋递增或递减出其余号码）')],
-    [B('下面我们摇出 ____ 分之 ____ 的中签号码，摇出一个 ____ 位数 作为基本中签号码，然后递增或递减 ____ ，得到另外 ____ 个中签号码。')],
-    [G('（此处进入通用摇号环节）')],
-    [B('____ 位数 的基本中签号码已经产生，是____________ '), G('（根据显示屏读出）'), B(' 根据电脑程序计算显示，递增或递减 ____ ，得到另外 ____ 个中签号码是____________________________________________')],
-    [B('凡申购号码 末 ____ 位数 与以上产生的号码相同 即中签。')]
-  ]).forEach(function(p){ out.push(p); });
-  out.push([]);
-  boxed([
-    [G('三、拆分环节（拆成两段分别摇）')],
-    [B('下面我们摇出 ____ 分之 ____ 的中签号码，将 ____ 分之 ____ 拆分成 ____ 分之 ____ 和 ____ 分之 ____ 。')],
-    [B('首先我们摇出 ____ 分之 ____ 的中签号码，摇出一个 ____ 位数 作为基本中签号码，然后递增或递减 ____ ，得到另外 ____ 个中签号码。')],
-    [G('（此处进入通用摇号环节）')],
-    [B('____ 位数 的基本中签号码已经产生，是____________ '), G('（根据显示屏读出）'), B(' 根据电脑程序计算显示，递增或递减 ____ ，得到另外 ____ 个中签号码是____________________________________________')],
-    [],
-    [B('下面我们摇出 ____ 分之 ____ 的中签号码，摇出一个 ____ 位数 的中签号码。')],
-    [G('（此处进入通用摇号环节）')],
-    [B('____ 位数 的中签号码已经产生，是____________ '), G('（根据显示屏读出）')],
-    [B('凡申购号码 末 ____ 位数 与以上产生的号码相同 即中签。')]
-  ]).forEach(function(p){ out.push(p); });
-  out.push([]);
-  boxed([
-    [G('四、最后一步（逐个产生完整号码）')],
-    [B('经计算，现在还有 ____ 个 ____ 位数的中签号码未产生。')],
-    [B('下面我们摇出 第_____个（最后一个） ____ 位数的中签号码。')],
-    [G('（此处进入通用摇号环节）')],
-    [B('____ 位数的后 ____ 位号码已经产生，是____________ ')],
-    [B('由于大于（小于） 配号总数的后 ____ 位数 ____________')],
-    [],
-    [G('（大于的情况下：使用号球 0～N-1）')],
-    [G('（小于或等于的情况下：使用号球 0～N）')],
-    [G('（只剩下一个可选号码：系统自动分配 倒数第 ____ 位号码为 _____）')],
-    [],
-    [B('请工作人员将1号机的全部号码球取出，将以下号码球放入摇号机中：')],
-    [G('（连续的数字念：“几至几”，随后再配合礼仪用汉字单独念一遍）')],
-    [B('____ 、 ____ 、 ____ 、……')],
-    [B('请由'), BD('1'), B('号机摇出倒数第 ____ 位的号码   '), G('（留意摇号情况）')],
-    [B('倒数第 ____ 位号码已经产生，是_______________')],
-    [],
-    [B('第_____个（最后一个） ____ 位数的中签号码已经产生，是______________________')],
-    [B('凡申购号码 末 ____ 位数 与以上产生的号码相同 即中签。')]
-  ]).forEach(function(p){ out.push(p); });
   return out;
 }
 
@@ -1224,15 +1141,17 @@ function buildDocument(v, rounds){
   P([B('上午好！欢迎光临 深圳证券信息有限公司  摇号抽签仪式现场。')]);
   P([B(v.company + ' '), R(v.kindInline), B('  摇号抽签仪式 现在开始！')]);
   P([B('本次摇号抽签是由')]);
-  P([B(v.client + ' 委托、深圳证券信息有限公司  承办，欢迎各位嘉宾的到来。首先让我们来认识一下参加本次摇号抽签仪式的各位嘉宾，')]);
+  P([B(v.clients.map(function(c){ return c.client; }).join('  ') + ' 委托、深圳证券信息有限公司  承办，欢迎各位嘉宾的到来。首先让我们来认识一下参加本次摇号抽签仪式的各位嘉宾，')]);
   P([G('（每介绍一位嘉宾，中间稍作停顿，等嘉宾点头示意后，再继续介绍下一位。）')]);   /* 独立成行 */
   P([B('来自发行人方面的嘉宾有：')]);   /* 恒在：先发行人 */
   v.issuerGuests.forEach(function(g){
     P([B(v.issuerGuestCo + ' ' + g.title + ' ' + g.name + ' ' + g.honor + ' ')]);
   });
-  P([B('来自主承销商方面的嘉宾有：')]);   /* 恒在：后主承销商 */
-  v.clientGuests.forEach(function(g){
-    P([B(v.clientGuestCo + ' ' + g.title + ' ' + g.name + ' ' + g.honor + ' ')]);
+  P([B('来自主承销商方面的嘉宾有：')]);   /* 恒在：后主承销商，逐家展示 */
+  v.clients.forEach(function(c){
+    c.guests.forEach(function(g){
+      P([B(c.guestCo + ' ' + g.title + ' ' + g.name + ' ' + g.honor + ' ')]);
+    });
   });
   P([B('同时还有来自' + v.office + '：' + v.notary1 + ' 公证员 和 ' + v.notary2 + ' 公证人员。')]);
   P([B('欢迎各位嘉宾的到来，并预祝' + v.company + ' '), R(v.kindInline), B(' 获得圆满成功。')]);
@@ -1291,11 +1210,8 @@ function buildDocument(v, rounds){
     boxStart = -1;
   }
   function openBox(){ closeBox(); boxStart = doc.length; }
-  function guestAt(num){   /* 环节编号 → 第 num 位嘉宾（先发行人后主承销商）；超出则不安排 */
-    if(num > v.guests.length) return null;
-    var g = v.guests[num - 1];
-    var co = num <= v.issuerGuests.length ? v.issuerGuestCo : v.clientGuestCo;
-    return {client:co, title:g.title, name:g.name, honor:g.honor};
+  function guestAt(num){   /* 环节编号 → 扁平嘉宾队列（先发行人，再按承销商顺序）；超出则不安排 */
+    return num > v.guests.length ? null : v.guests[num - 1];
   }
   v.shown.forEach(function(st){
     openBox();
@@ -1346,7 +1262,7 @@ function buildDocument(v, rounds){
   var lastTitle = G(K + 2 + ' 、最后一步');
   lastTitle.brk = true;   /* 导出时末步单独成页（docx 分页符 / 打印 break-before） */
   P([lastTitle]);
-  P([R('经计算，现在还有 '), LV('remainingEcho', 'comp', 4), R(' 个 ' + D + ' 位数的中签号码未产生。')]);
+  P([R('经计算，现在还有 '), LV('remainingEcho', 'comp', 4, {u:true}), R(' 个 ' + D + ' 位数的中签号码未产生。')]);
   for(var rl = 1; rl <= rounds.last; rl++){
     lastRoundParas(v, rl).forEach(function(p){ P(p); });
   }
@@ -1464,7 +1380,6 @@ function docToText(doc, resolve){
   var out = [];
   doc.forEach(function(p){
     if(p.length > 0 && p.every(function(r){ return r.live && r.live.kind === 'addBtn'; })) return;
-    if(p.length === 1 && p[0].tbl) return;   /* 记录表格：纯视觉辅助，文本导出跳过（球号行本身已含） */
     out.push(p.map(function(r){ return runToText(r, resolve); }).join(''));
   });
   return out.join('\n');
@@ -1480,9 +1395,8 @@ function escXml(s){
 /* 属性上下文转义（input value="…"）：防引号突破属性 */
 function escAttr(s){ return escHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
-/* 页眉块 HTML（预览与打印共用）：左对齐三行速查表——行2 以 5em 缩进（6 与行1 的 1 上下对齐），
-   行3 红字配号总数（首位数字大两号并加粗；占位符不放大；total 传 null 时不显示该行，用于查阅表页）；
-   条目用 inline-block 包裹，窄屏只在完整条目之间折行 */
+/* 页眉块 HTML（预览与打印共用）：左对齐三行速查——1–5、6–10、11–12；行2 以 5em 缩进（6 与行1 的 1 对齐），
+   配号总数单独一行（首位三号加粗；占位符不放大）；条目用 inline-block 包裹，窄屏只在完整条目之间折行 */
 function pageHeaderHtml(total){
   function items(arr){ return arr.map(function(t){ return '<span class="cheat-item">' + t + '</span>'; }).join(''); }
   var totalLine = '';
@@ -1496,25 +1410,15 @@ function pageHeaderHtml(total){
   }
   return '<div class="page-header">' +
     '<div class="cheat"><span class="cheat-label">末位尾数：</span>' + items(['1→十分之','2→百分之','3→千分之','4→万分之','5→十万分之']) + '</div>' +
-    '<div class="cheat"><span class="cheat-indent" aria-hidden="true"></span>' + items(['6→百万分之','7→千万分之','8→亿分之','9→十亿分之','10→百亿分之','11→千亿分之','12→万亿分之']) + '</div>' +
+    '<div class="cheat"><span class="cheat-indent" aria-hidden="true"></span>' + items(['6→百万分之','7→千万分之','8→亿分之','9→十亿分之','10→百亿分之']) + '</div>' +
+    '<div class="cheat">' + items(['11→千亿分之','12→万亿分之']) + '</div>' +
     totalLine + '</div>';
 }
 
-/* 在 pb（新起一页）标记段处拆分文档：无标记 → [doc]；有标记 → [主体, 标记起至末尾] */
-function splitAtPageBreak(doc){
-  for(var i = 0; i < doc.length; i++){
-    if(doc[i].some && doc[i].some(function(r){ return r.pb; })) return [doc.slice(0, i), doc.slice(i)];
-  }
-  return [doc];
-}
-
-/* 主持稿预览 HTML：一个或多个 print-table（pb 拆分处另起表格，打印时第二个表 page-break-before 新起一页；
-   每表自带 thead 页眉；查阅表所在表页眉不含配号总数、正文小五字） */
+/* 主持稿预览 HTML：单个 print-table，thead 在打印时逐页重复页眉 */
 function scriptTablesHtml(total, doc, state){
-  return splitAtPageBreak(doc).map(function(paras, i){
-    return '<table class="print-table' + (i > 0 ? ' pb' : '') + '"><thead><tr><td>' + pageHeaderHtml(i > 0 ? null : total) +
-      '</td></tr></thead><tbody><tr><td>' + docToPreviewHtml(paras, state) + '</td></tr></tbody></table>';
-  }).join('');
+  return '<table class="print-table"><thead><tr><td>' + pageHeaderHtml(total) +
+    '</td></tr></thead><tbody><tr><td>' + docToPreviewHtml(doc, state) + '</td></tr></tbody></table>';
 }
 
 function docToPreviewHtml(doc, state){
@@ -1524,36 +1428,31 @@ function docToPreviewHtml(doc, state){
     else if(p.length === 1 && p[0].live && p[0].live.kind === 'addBtn'){
       html = '<p class="lv-addrow no-print"><button type="button" class="btn ghost btn-sm" data-addround="' +
         p[0].live.where + '">＋ 再摇一轮</button></p>';
-    }else if(p.length === 1 && p[0].tbl){
-      /* 记录表格：2 行（数字/汉字）×10 列，空列供现场记录 */
-      var tb = p[0].tbl;
-      var cells = function(arr){ var h = ''; for(var ci = 0; ci < 10; ci++) h += '<td>' + escHtml(arr[ci] || '') + '</td>'; return h; };
-      html = '<table class="rec-tbl"><tbody><tr>' + cells(tb.digits) + '</tr><tr>' + cells(tb.cn) + '</tr></tbody></table>';
     }else{
       var inner = p.map(function(r){
         if(r.live){
           var lv = r.live;
           var val = (state && state.values[lv.id]) || '';
           if(lv.kind === 'comp'){
-            return '<span class="v lvcomp" data-live="' + lv.id + '">' + escHtml(val || blankOf(lv)) + '</span>';
+            return '<span class="v lvcomp' + (r.u ? ' u' : '') + '" data-live="' + lv.id + '">' + escHtml(val || blankOf(lv)) + '</span>';
           }
           var w = lv.kind === 'digit' ? '' :
             ' style="width:' + (lv.exp ? Math.min((lv.N + 1) * ((lv.m || 2) - 1) + 2, 70) : (lv.N ? lv.N + 2 : lv.blank + 1)) + 'ch"';
-          var cls = 'v lv ' + (lv.kind === 'digit' ? 'dig' : lv.kind === 'text' ? 'txt' : 'num') + (lv.exp ? ' exp' : '');
+          var cls = 'v lv ' + (lv.kind === 'digit' ? 'dig' : lv.kind === 'text' ? 'txt' : 'num') + (lv.exp ? ' exp' : '') + (r.u ? ' u' : '');
           return '<input class="' + cls + '" data-live="' + lv.id + '" value="' + escAttr(val) + '"' + w +
             ' aria-label="' + (lv.kind === 'digit' ? '倒数第' + lv.pos + '位' : lv.kind === 'text' ? '现场填写' : '号码') + '"' +
             (lv.kind === 'digit' ? ' maxlength="1" inputmode="numeric"' : '') + ' autocomplete="off" spellcheck="false">';
         }
         var t = escHtml(r.t);
-        if(r.c === 'r') return '<span class="v">' + t + '</span>';
-        if(r.c === 'b') return '<span class="b">' + t + '</span>';   /* 加粗黑（摇号机号等） */
+        if(r.c === 'r') return '<span class="v' + (r.u === false ? '' : ' u') + '">' + t + '</span>';
+        if(r.c === 'b') return '<span class="b">' + t + '</span>';   /* 黑色四号加粗下划线：机号与倒数位次 */
         if(r.c === 'g') return '<span class="g">' + t + '</span>';
         if(r.c === 'm') return '<span class="m">' + t + '</span>';
         return t;
       }).join('');
       html = '<p>' + inner + '</p>';
     }
-    /* 蓝框分节（查阅表各环节）：段首开 div、段尾闭合；brk 标记（末步）打印新起一页 */
+    /* 主稿蓝框分节：段首开 div、段尾闭合；brk 标记（末步）打印新起一页 */
     if(p.box === 's' || p.box === 'solo') html = '<div class="lk-box' + (p.some(function(r){ return r.brk; }) ? ' brk' : '') + '">' + html;
     if(p.box === 'e' || p.box === 'solo') html += '</div>';
     return html;
@@ -1609,13 +1508,13 @@ function zipStore(entries){
   return new Blob(chunks, {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
 
-/* 页眉部件：左对齐"末位尾数→分位"速查表三行——行2 以 5 个全角空格缩进（与"末位尾数："同宽，使 6 与行1 的 1 上下对齐），
-   行3 红字配号总数（随文档动态填入，首位数字大两号=四号 14pt 并加粗）；total 传 null 时不输出配号总数行（查阅表所在节用） */
+/* 页眉部件：左对齐三行速查（1–5、6–10、11–12），行2 以 5 个全角空格缩进使 6 与行1 的 1 对齐；
+   配号总数单独一行：小四黑色加粗，首位三号 16pt；total 传 null 时不输出配号总数行 */
 function headerXml(total){
   function para(runs){ return '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>' + runs + '</w:p>'; }
-  function run(t, red, sz){
+  function run(t, bold, sz){
     return '<w:r><w:rPr><w:rFonts w:ascii="SimSun" w:eastAsia="SimSun" w:hAnsi="SimSun"/>' +
-      (red ? '<w:b/><w:bCs/><w:color w:val="FF0000"/>' : '') +
+      (bold ? '<w:b/><w:bCs/>' : '') + '<w:color w:val="000000"/>' +
       '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/></w:rPr>' +
       '<w:t xml:space="preserve">' + escXml(t) + '</w:t></w:r>';
   }
@@ -1623,77 +1522,44 @@ function headerXml(total){
   if(total != null){
     var totalStr = String(total);
     var big = /^\d/.test(totalStr);   /* 占位符（________）不放大首字符 */
-    totalPara = para(run('配号总数：', true, 21) +
-         (big ? run(totalStr.charAt(0), true, 28) + run(totalStr.slice(1), true, 21) : run(totalStr, true, 21)));
+    totalPara = para(run('配号总数：', true, 24) +
+         (big ? run(totalStr.charAt(0), true, 32) + run(totalStr.slice(1), true, 24) : run(totalStr, true, 24)));
   }
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-    para(run('末位尾数：1→十分之  2→百分之  3→千分之  4→万分之  5→十万分之', false, 18)) +
-    para(run('　　　　　6→百万分之  7→千万分之  8→亿分之  9→十亿分之  10→百亿分之  11→千亿分之  12→万亿分之', false, 18)) +
+    para(run('末位尾数：1→十分之  2→百分之  3→千分之  4→万分之  5→十万分之', false, 24)) +
+    para(run('　　　　　6→百万分之  7→千万分之  8→亿分之  9→十亿分之  10→百亿分之', false, 24)) +
+    para(run('11→千亿分之  12→万亿分之', false, 24)) +
     totalPara +
     '</w:hdr>';
 }
 
-/* 由文档模型生成真实 .docx：A4、2.5cm 页边距、五号宋体（SimSun）、1.0 倍行距，红绿灰三色与网页一致；
-   live run 经 resolve 带当前值（空则留白），addBtn 段整段跳过；
-   主持稿为单 section：header1（速查表+红字配号总数）逐页显示；
-   查阅表固定模板独立导出（standaloneLookup）：全文小五 9pt，仅挂 header2（速查表无配号总数） */
+/* 由文档模型生成真实 .docx：A4、2.5cm 页边距、宋体（SimSun）、单倍行距、文字全黑；
+   正文小四 12pt，强调四号 14pt；R 按 u 决定下划线，BD 机号/位次固定下划线，G 为斜体；
+   live run 经 resolve 带当前值（空则留白），addBtn 段整段跳过；主稿单 section，header1 逐页显示 */
 function docToDocxBlob(doc, resolve, headerTotal){
-  function runXml(r, sz){
+  function runXml(r){
     if(r.live && r.live.kind === 'addBtn') return '';
     var t = escXml(runToText(r, resolve));
     if(!t) return '';
-    var color = r.c === 'r' ? 'FF0000' : r.c === 'g' ? '228B22' : r.c === 'm' ? '94A3B8' : '';
+    var emph = r.c === 'r' || r.c === 'b';
+    var sz = emph ? '28' : '24';
     return '<w:r><w:rPr><w:rFonts w:ascii="SimSun" w:eastAsia="SimSun" w:hAnsi="SimSun"/>' +
-      (r.c === 'r' || r.c === 'b' ? '<w:b/><w:bCs/>' : '') +   /* 填入/计算值红色加粗；摇号机号等加粗黑 */
-      (r.c === 'g' ? '<w:i/><w:iCs/>' : '') +      /* 现场提示语：斜体 */
-      (color ? '<w:color w:val="' + color + '"/>' : '') +   /* schema 顺序：b/i 在 color 前 */
-      '<w:spacing w:val="13"/>' +                  /* 字距 0.06em（五号 10.5pt×0.06≈0.63pt＝13/20pt，与预览/打印一致） */
-      '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/></w:rPr>' +   /* 五号 10.5pt / 查阅表小五 9pt */
-      '<w:t xml:space="preserve">' + t + '</w:t></w:r>';
+      (emph ? '<w:b/><w:bCs/>' : '') +
+      (r.c === 'g' ? '<w:i/><w:iCs/>' : '') +
+      '<w:color w:val="000000"/>' +
+      '<w:spacing w:val="14"/>' +                  /* 字距约 0.06em（小四 12pt×0.06≈0.72pt＝14/20pt） */
+      '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' +
+      (r.c === 'b' || (r.c === 'r' && r.u !== false) ? '<w:u w:val="single"/>' : '') +
+      '</w:rPr><w:t xml:space="preserve">' + t + '</w:t></w:r>';
   }
   var sectPr = function(rid){
     return '<w:sectPr><w:headerReference w:type="default" r:id="' + rid + '"/><w:pgSz w:w="11906" w:h="16838"/>' +
       '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="851" w:footer="992" w:gutter="0"/></w:sectPr>';
   };
-  var inLookup = false, hasLookup = false;
-  /* 独立查阅表导出（首段即 pb 标记）：不打包 header1（配号总数页眉），全文挂 header2（仅速查表） */
-  var standaloneLookup = doc.length > 0 && doc[0].some(function(r){ return r.pb; });
-  /* 记录表格（最后一步号球区）：2 行（数字/汉字）×10 列带边框，空列供现场记录；
-     外框用环节蓝框同色（2563EB），避免打断 Word 相邻段落边框合并，蓝框视觉连续 */
-  function tblXml(tb){
-    function cell(t){
-      return '<w:tc><w:tcPr><w:tcW w:w="907" w:type="dxa"/></w:tcPr>' +
-        '<w:p><w:pPr><w:spacing w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>' +
-        (t ? '<w:r><w:rPr><w:rFonts w:ascii="SimSun" w:eastAsia="SimSun" w:hAnsi="SimSun"/>' +
-          '<w:b/><w:bCs/><w:color w:val="FF0000"/><w:spacing w:val="13"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr>' +
-          '<w:t xml:space="preserve">' + escXml(t) + '</w:t></w:r>' : '') +
-        '</w:p></w:tc>';
-    }
-    var rows = '';
-    [tb.digits, tb.cn].forEach(function(arr){
-      rows += '<w:tr>';
-      for(var i = 0; i < 10; i++) rows += cell(arr[i] || '');
-      rows += '</w:tr>';
-    });
-    var outerBlue = ['top', 'left', 'bottom', 'right'].map(function(b){
-      return '<w:' + b + ' w:val="single" w:sz="12" w:space="4" w:color="2563EB"/>';
-    }).join('');
-    var innerBlack = ['insideH', 'insideV'].map(function(b){
-      return '<w:' + b + ' w:val="single" w:sz="4" w:space="0" w:color="auto"/>';
-    }).join('');
-    return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>' +
-      '<w:tblBorders>' + outerBlue + innerBlack + '</w:tblBorders>' +
-      '<w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr>' +
-      '<w:tblGrid>' + '<w:gridCol w:w="907"/>'.repeat(10) + '</w:tblGrid>' + rows + '</w:tbl>';
-  }
-  var paras = doc.map(function(p, idx){
+  var paras = doc.map(function(p){
     if(p.length > 0 && p.every(function(r){ return r.live && r.live.kind === 'addBtn'; })) return '';
-    if(p.length === 1 && p[0].tbl) return tblXml(p[0].tbl);   /* 记录表格：块级元素（球号行本身已含数字） */
-    if(p.some(function(r){ return r.pb; })){ inLookup = true; hasLookup = true; }   /* 查阅表起改小五 */
-    /* 下一段为查阅表首段时，本段末尾插入分节符（新节页眉不含配号总数，分页由分节符承担） */
-    var nextPb = idx + 1 < doc.length && doc[idx + 1].some(function(r){ return r.pb; });
-    /* 蓝框分节（查阅表各环节）：段首/段尾分别补上/下边框，相邻同边框段落 Word 自动合并为一个整框 */
+    /* 主稿蓝框分节：段首/段尾分别补上/下边框，相邻同边框段落 Word 自动合并为一个整框 */
     var bx = p.box, pBdr = '';
     if(bx){
       pBdr = '<w:pBdr>' +
@@ -1705,22 +1571,20 @@ function docToDocxBlob(doc, resolve, headerTotal){
     }
     /* brk 标记（末步标题段）：新起一页 */
     var brk = p.some(function(r){ return r.brk; }) ? '<w:pageBreakBefore/>' : '';
-    return '<w:p><w:pPr>' + brk + pBdr + '<w:spacing w:after="80" w:line="240" w:lineRule="auto"/>' + (nextPb ? sectPr('rId2') : '') + '</w:pPr>' +
-      p.map(function(r){ return runXml(r, inLookup ? '18' : '21'); }).join('') + '</w:p>';
+    return '<w:p><w:pPr>' + brk + pBdr + '<w:spacing w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>' +
+      p.map(runXml).join('') + '</w:p>';
   }).join('');
   var documentXml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' +
-    paras +
-    sectPr(hasLookup ? 'rId3' : 'rId2') + '</w:body></w:document>';   /* 无查阅表（骨架稿）时全文用 header1 */
+    paras + sectPr('rId2') + '</w:body></w:document>';
   var contentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
     '<Default Extension="xml" ContentType="application/xml"/>' +
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
-    (standaloneLookup ? '' : '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>') +
-    (hasLookup ? '<Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' : '') +
+    '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
     '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
@@ -1736,15 +1600,14 @@ function docToDocxBlob(doc, resolve, headerTotal){
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
-    (standaloneLookup ? '' : '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>') +
-    (hasLookup ? '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>' : '') +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' +
     '</Relationships>';
   var stylesXml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
     '<w:docDefaults><w:rPrDefault><w:rPr>' +
     '<w:rFonts w:ascii="SimSun" w:eastAsia="SimSun" w:hAnsi="SimSun"/>' +
-    '<w:sz w:val="21"/><w:szCs w:val="21"/>' +   /* 五号 10.5pt */
+    '<w:sz w:val="24"/><w:szCs w:val="24"/>' +   /* 小四 12pt */
     '</w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults>' +
     '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' +
     '</w:styles>';
@@ -1769,8 +1632,7 @@ function docToDocxBlob(doc, resolve, headerTotal){
     {name:'word/_rels/document.xml.rels', data:enc.encode(docRels)},
     {name:'word/styles.xml', data:enc.encode(stylesXml)}
   ];
-  if(!standaloneLookup) files.push({name:'word/header1.xml', data:enc.encode(headerXml(headerTotal == null ? '________' : headerTotal))});
-  if(hasLookup) files.push({name:'word/header2.xml', data:enc.encode(headerXml(null))});   /* 查阅表：页眉仅速查表 */
+  files.push({name:'word/header1.xml', data:enc.encode(headerXml(headerTotal == null ? '________' : headerTotal))});
   return zipStore(files);
 }
 
@@ -1778,27 +1640,7 @@ function docToDocxBlob(doc, resolve, headerTotal){
 
 if(typeof document !== 'undefined'){
 
-  var DEFAULTS_IPO = {
-    type:'ipo',
-    company:'中电科思仪科技 股份有限公司', client:'国泰海通证券 股份有限公司',
-    clientGuestCo:'', issuerGuestCo:'',
-    clientGuests:[{title:'高级经理', name:'钱佳位', honor:'先生'}],
-    issuerGuests:[],
-    office:'广东省深圳市罗湖公证处', notary1:'伍斌', notary2:'杨勇',
-    issue:'24496500', shares:'500', total:'270159586',
-    winCount:'', range:'', rate:'0.0181348368'
-  };
-  var DEFAULTS_KZZ = {
-    type:'kzz',
-    company:'深圳市 强达电路 股份有限公司', client:'招商证券 股份有限公司',
-    clientGuestCo:'', issuerGuestCo:'',
-    clientGuests:[{title:'投资银行委员会 股票资本市场部 高级经理', name:'龙颖桢', honor:'先生'}],
-    issuerGuests:[],
-    office:'广东省深圳市罗湖公证处', notary1:'伍斌', notary2:'杨勇',
-    issue:'728460', shares:'10', total:'10525519348',
-    winCount:'', range:'', rate:'0.0006920893'
-  };
-  var SCALAR_FIELDS = {company:'fCompany', client:'fClient', clientGuestCo:'fClientGuestCo', issuerGuestCo:'fIssuerGuestCo',
+  var SCALAR_FIELDS = {company:'fCompany', issuerGuestCo:'fIssuerGuestCo',
     office:'fOffice', notary1:'fNotary1', notary2:'fNotary2', issue:'fIssue', shares:'fShares', total:'fTotal',
     winCount:'fWinCount', range:'fRange', rate:'fRate'};
 
@@ -1809,19 +1651,19 @@ if(typeof document !== 'undefined'){
   var overviewNote = document.getElementById('overviewNote');
   var scriptDoc = document.getElementById('scriptDoc');
   var genBtn = document.getElementById('genBtn');
-  var resetBtn = document.getElementById('resetBtn');
   var copyBtn = document.getElementById('copyBtn');
   var wordBtn = document.getElementById('wordBtn');
   var printBtn = document.getElementById('printBtn');
   var pdfBtn = document.getElementById('pdfBtn');
+  var applyParseBtn = document.getElementById('applyParseBtn');
+  var pendingParse = null;   /* 解析期间表单被修改时暂存结果，待用户明确应用 */
   var pdfStatus = document.getElementById('pdfStatus');
   var fPdfUrl = document.getElementById('fPdfUrl');
   var fPdfFile = document.getElementById('fPdfFile');
   var fType = document.getElementById('fType');
-  var resetBtn2 = document.getElementById('resetBtn2');
-  var clientGuestRows = document.getElementById('clientGuestRows');
+  var clientBlocks = document.getElementById('clientBlocks');
   var issuerGuestRows = document.getElementById('issuerGuestRows');
-  var addClientGuest = document.getElementById('addClientGuest');
+  var addClient = document.getElementById('addClient');
   var addIssuerGuest = document.getElementById('addIssuerGuest');
   var currentText = '';
   var currentDocxBlob = null;
@@ -1868,10 +1710,11 @@ if(typeof document !== 'undefined'){
   });
 
   /* ---- 嘉宾动态行 ---- */
-  /* 每组嘉宾最多 2 位（仪式惯例：发行人/主承销商各至多两位上台），满 2 位隐藏增加按钮 */
+  /* 发行人及每家承销商各最多 2 位嘉宾，满 2 位隐藏对应增加按钮 */
   function syncGuestCap(){
-    [[clientGuestRows, addClientGuest], [issuerGuestRows, addIssuerGuest]].forEach(function(pair){
-      pair[1].style.display = pair[0].querySelectorAll('.guest-row').length >= 2 ? 'none' : '';
+    addIssuerGuest.style.display = issuerGuestRows.querySelectorAll('.guest-row').length >= 2 ? 'none' : '';
+    clientBlocks.querySelectorAll('.client-block').forEach(function(block){
+      block.querySelector('.client-add-guest').style.display = block.querySelectorAll('.guest-row').length >= 2 ? 'none' : '';
     });
   }
   function addGuestRow(container, g){
@@ -1898,6 +1741,49 @@ if(typeof document !== 'undefined'){
     });
   }
 
+  /* ---- 任意多家主承销商动态块 ---- */
+  function syncClientBlocks(){
+    var blocks = clientBlocks.querySelectorAll('.client-block');
+    blocks.forEach(function(block, i){
+      block.querySelector('.client-block-title').textContent = '主承销商 ' + (i + 1);
+      block.querySelector('.client-del').disabled = blocks.length === 1;
+    });
+    syncGuestCap();
+  }
+  function addClientBlock(c){
+    c = c || {};
+    var block = document.createElement('div');
+    block.className = 'client-block';
+    block.innerHTML = '<div class="client-block-head"><span class="client-block-title">主承销商</span>' +
+      '<button class="btn ghost btn-del client-del" type="button" title="删除该承销商" aria-label="删除该承销商">×</button></div>' +
+      '<div class="grid"><div class="fld"><label>委托（主承销商）全称</label>' +
+      '<input type="text" class="c-client" aria-label="委托（主承销商）全称"></div>' +
+      '<div class="fld"><label>公司名称（嘉宾所属，留空＝同委托方）</label>' +
+      '<input type="text" class="c-guestco" aria-label="公司名称（嘉宾所属，留空＝同委托方）"></div></div>' +
+      '<div class="client-guests"></div>' +
+      '<button class="btn ghost btn-sm client-add-guest" type="button">＋ 增加主承销商嘉宾</button>';
+    block.querySelector('.c-client').value = c.client || '';
+    block.querySelector('.c-guestco').value = c.guestCo || '';
+    block.querySelector('.client-add-guest').addEventListener('click', function(){ addGuestRow(block.querySelector('.client-guests')); });
+    block.querySelector('.client-del').addEventListener('click', function(){
+      if(clientBlocks.querySelectorAll('.client-block').length > 1){ block.remove(); syncClientBlocks(); }
+    });
+    clientBlocks.appendChild(block);
+    setGuestRows(block.querySelector('.client-guests'), c.guests && c.guests.length ? c.guests : [{}]);
+    syncClientBlocks();
+  }
+  function setClientBlocks(clients){
+    clientBlocks.innerHTML = '';
+    (clients && clients.length ? clients : [{}]).forEach(addClientBlock);
+  }
+  function readClientBlocks(){
+    return Array.prototype.map.call(clientBlocks.querySelectorAll('.client-block'), function(block){
+      return {client:block.querySelector('.c-client').value.trim(),
+        guestCo:block.querySelector('.c-guestco').value,
+        guests:readGuestRows(block.querySelector('.client-guests'))};
+    });
+  }
+
   /* ---- 仪式类型联动 ---- */
   function currentType(){ return fType.value === 'kzz' ? 'kzz' : 'ipo'; }
   function syncTypeLabels(){
@@ -1906,18 +1792,10 @@ if(typeof document !== 'undefined'){
     document.getElementById('lblShares').textContent = '每 N ' + u + '确定一个申购号';
   }
 
-  function fillForm(d){
-    fType.value = d.type;
-    Object.keys(SCALAR_FIELDS).forEach(function(k){ document.getElementById(SCALAR_FIELDS[k]).value = d[k]; });
-    setGuestRows(clientGuestRows, d.clientGuests);
-    setGuestRows(issuerGuestRows, d.issuerGuests);
-    syncTypeLabels();
-  }
-
   function collectRaw(){
     var raw = {type:currentType()};
     Object.keys(SCALAR_FIELDS).forEach(function(k){ raw[k] = document.getElementById(SCALAR_FIELDS[k]).value; });
-    raw.clientGuests = readGuestRows(clientGuestRows);
+    raw.clients = readClientBlocks();
     raw.issuerGuests = readGuestRows(issuerGuestRows);
     return raw;
   }
@@ -1952,7 +1830,7 @@ if(typeof document !== 'undefined'){
     overviewTable.innerHTML = html;
     overviewNote.textContent = '申购配号总数 ' + v.total + ' 共 ' + v.D + ' 位：摇号环节生成至 ' +
       DENOM_NAMES[v.maxN] + '分位（N≤' + v.maxN + '），更深数位由「倒数第二步 / 最后一步」承接；' +
-      '号码中签数 ' + v.winCount + (v.winAuto ? '（自动＝发行量÷每号股数）' : '（手工填写）') + '。';
+      '号码中签数 ' + v.winCount + (v.winAuto ? '（自动＝发行量÷每号' + v.unit + '数）' : '（手工填写）') + '。';
   }
 
   function generate(){
@@ -1983,13 +1861,12 @@ if(typeof document !== 'undefined'){
     renderOverview(v);
     overviewCard.style.display = '';
     scriptDoc.innerHTML = scriptTablesHtml(v.total, doc, liveState);
-    liveCard.style.display = '';
     outputArea.style.display = '';
     updateLive();
     generatedOnce = true;
   }
 
-  /* 空表状态：显示主持稿示意骨架（表单决定的部分留白），总览表与现场记录卡隐藏 */
+  /* 空表状态：显示主持稿示意骨架（表单决定的部分留白），总览表隐藏 */
   var generatedOnce = false;
   function renderSkeleton(){
     generatedOnce = false;
@@ -1998,24 +1875,22 @@ if(typeof document !== 'undefined'){
     currentDocxBlob = docToDocxBlob(doc, undefined, '________');
     currentFileName = '摇号抽签仪式主持稿.docx';
     overviewCard.style.display = 'none';
-    liveCard.style.display = 'none';
+    liveAlert.textContent = '';
+    liveAlert.style.display = 'none';
     liveV = null; liveState = null; liveDoc = null;
     scriptDoc.innerHTML = scriptTablesHtml('________', doc, null);
     outputArea.style.display = '';
   }
 
-  /* ============ 现场实时辅助层 ============ */
+  /* ============ 稿内现场填写与计算层 ============ */
   var liveV = null;          /* 当前生成数据的 v */
   var liveState = null;      /* {sig, values, pinned, p2Rounds, lastRounds, cache} */
   var liveDoc = null;        /* 当前文档模型（含轮次） */
   var liveIndex = {};        /* liveId → live 描述 */
   var liveGroupMap = {};     /* 数字组前缀 → {N, m, interval} */
-  var liveCard = document.getElementById('liveCard');
-  var liveStatus = document.getElementById('liveStatus');
-  var liveTable = document.getElementById('liveTable');
-  var liveClearBtn = document.getElementById('liveClearBtn');
+  var liveAlert = document.getElementById('liveAlert');
 
-  function liveSig(v){ return [v.company, v.client, v.total, v.rateNorm, v.type, v.issue, v.shares, v.winCount].join('|'); }
+  function liveSig(v){ return [v.company, v.clients.map(function(c){ return c.client; }).join('、'), v.total, v.rateNorm, v.type, v.issue, v.shares, v.winCount].join('|'); }
 
   function saveLive(){
     if(!liveState) return;
@@ -2114,32 +1989,6 @@ if(typeof document !== 'undefined'){
     syncAuto(prefix + 'final', fin);
   }
 
-  function renderLiveTable(cache){
-    var html = '<thead><tr><th>环节/轮次</th><th>位数</th><th>中签号码</th><th>每个覆盖个数</th><th>本次新增</th><th>状态</th></tr></thead><tbody>';
-    var any = false;
-    cache.rows.forEach(function(rw){
-      if(!rw.nums && !rw.status) return;
-      any = true;
-      html += '<tr class="' + (rw.bad ? 'bad' : rw.warn ? 'warn' : '') + '"><td>' + escHtml(rw.label) + '</td><td>末 ' + rw.N + ' 位</td><td class="nums">' +
-        escHtml(rw.nums) + '</td><td class="nums">' + escHtml(rw.each || '') + '</td><td>' + rw.add + '</td><td>' +
-        escHtml(rw.status || '有效') + '</td></tr>';
-    });
-    if(!any) html += '<tr><td colspan="6" style="color:var(--muted)">填写摇号数字后，此处实时更新中签号码与个数</td></tr>';
-    liveTable.innerHTML = html + '</tbody>';
-  }
-
-  function renderLiveStatus(cache){
-    var touched = liveTouched();
-    var dText = !touched ? '<span style="color:var(--muted)">填写摇号数字后自动判定当前步骤</span>'
-      : cache.decision === 'end' ? '<span class="st-end">摇号结束，直接念结束语</span>'
-      : cache.decision === 'last' ? '<span class="st-last">剩余 ≤ 首位数字 ' + liveV.firstDigit + ' → 进入最后一步</span>'
-      : '<span class="st-p2">剩余 &gt; 首位数字 ' + liveV.firstDigit + ' → 倒数第二步再摇一轮</span>';
-    liveStatus.innerHTML = '共需中签号码 <b>' + liveV.winCount + '</b> 个 ｜ 已产生 <b>' + cache.used + '</b> 个 ｜ 剩余 <b>' +
-      cache.remaining + '</b> 个' +
-      (cache.overBy ? ' <span class="st-over">（超出 ' + cache.overBy + ' 个，请核对）</span>' : '') +
-      ' ｜ ' + dText;
-  }
-
   function updateLive(){
     if(!liveV || !liveState) return;
     var cache = computeLive(liveV, liveState);
@@ -2155,8 +2004,20 @@ if(typeof document !== 'undefined'){
         if(el) el.classList.add('lv-bad');
       }
     });
-    renderLiveTable(cache);
-    renderLiveStatus(cache);
+    /* 轻量内联警示（不恢复已删除的记录卡）：显示重号/超额原因、可用号球和当前阶段 */
+    var alertRow = cache.rows.find(function(rw){ return rw.bad; }) || cache.rows.find(function(rw){ return rw.warn; }) ||
+      cache.rows.filter(function(rw){ return rw.status && rw.status !== '有效'; }).slice(-1)[0];
+    if(liveTouched()){
+      var stageText = cache.decision === 'end' ? '摇号结束，直接念结束语' :
+        cache.decision === 'last' ? '剩余 ≤ 首位数字 ' + liveV.firstDigit + ' → 进入最后一步' :
+        '剩余 > 首位数字 ' + liveV.firstDigit + ' → 倒数第二步再摇一轮';
+      liveAlert.textContent = (alertRow ? alertRow.label + '：' + alertRow.status + ' ｜ ' : '') + stageText;
+      liveAlert.className = 'live-alert no-print' + (alertRow && alertRow.bad ? ' bad' : alertRow && alertRow.warn ? ' warn' : '');
+      liveAlert.style.display = '';
+    }else{
+      liveAlert.textContent = '';
+      liveAlert.style.display = 'none';
+    }
     saveLive();
   }
 
@@ -2231,21 +2092,8 @@ if(typeof document !== 'undefined'){
     if(first) first.focus();
   });
 
-  /* 清空已填写 */
-  liveClearBtn.addEventListener('click', function(){
-    if(!liveState) return;
-    liveState.values = {};
-    liveState.pinned = {};
-    liveState.p2Rounds = 1;
-    liveState.lastRounds = 1;
-    saveLive();
-    rebuildLiveDoc();
-  });
-
   genBtn.addEventListener('click', generate);
-  resetBtn.addEventListener('click', function(){ fillForm(DEFAULTS_IPO); generate(); });
-  resetBtn2.addEventListener('click', function(){ fillForm(DEFAULTS_KZZ); generate(); });
-  addClientGuest.addEventListener('click', function(){ addGuestRow(clientGuestRows); });
+  addClient.addEventListener('click', function(){ addClientBlock(); });
   addIssuerGuest.addEventListener('click', function(){ addGuestRow(issuerGuestRows); });
   fType.addEventListener('change', function(){
     syncTypeLabels();
@@ -2255,7 +2103,7 @@ if(typeof document !== 'undefined'){
     if(e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
     if(e.target.closest && e.target.closest('.guest-row')) return;              /* 嘉宾行回车不触发生成 */
     if(e.target === fPdfUrl){
-      if(fPdfUrl.value.trim()){ pdfBtn.click(); }                               /* 网址框回车＝解析 PDF */
+      if(fPdfUrl.value.trim() || (fPdfFile.files && fPdfFile.files[0])){ pdfBtn.click(); }   /* 网址框回车＝解析 PDF；本地文件优先 */
       else setPdfStatus('请先粘贴公告网址或选择本地 PDF 文件（移动端：长按输入框 → 粘贴，再点「解析 PDF 并填充」）', 'err');
       return;
     }
@@ -2323,7 +2171,6 @@ if(typeof document !== 'undefined'){
      worker:'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
   ];
   var pdfJsPromise = null;
-  var lastParsedClient = '';   /* 上次公告解析自动填入的承销商：嘉宾公司框仍等于它才跟随联动（防串稿），用户手改则保留 */
   function loadPdfJs(){
     if(window.pdfjsLib) return Promise.resolve();
     if(pdfJsPromise) return pdfJsPromise;
@@ -2442,10 +2289,43 @@ if(typeof document !== 'undefined'){
     }else runParse();
   });
 
+  function applyParsedAnnouncement(r){
+    fType.value = r.fields.ceremony;
+    syncTypeLabels();
+    document.getElementById('fCompany').value = r.fields.company;
+    /* 联席承销商逐块填充；同公司保留手工嘉宾，新增公司补空白嘉宾，消失公司不再带入 */
+    var parsedClients = r.fields.clients && r.fields.clients.length ? r.fields.clients : [r.fields.client];
+    var previousClients = readClientBlocks();
+    setClientBlocks(parsedClients.map(function(name){
+      var old = previousClients.filter(function(c){ return c.client === name; })[0];
+      return old || {client:name, guestCo:'', guests:[{}]};
+    }));
+    document.getElementById('fIssue').value = r.fields.issue;
+    document.getElementById('fShares').value = r.fields.shares;
+    document.getElementById('fTotal').value = r.fields.total;
+    document.getElementById('fRate').value = r.fields.rate;
+    /* 中签数与配号区间均由本次公告派生：清空上一份公告/手工旧值，强制按新数据重新自动计算（嘉宾与公证信息仍保留） */
+    document.getElementById('fWinCount').value = '';
+    document.getElementById('fRange').value = '';
+    var lines = ['解析成功，已填充以下字段，请核对：',
+      '发行公司：' + r.fields.company,
+      '主承销商：' + parsedClients.join('、') + (parsedClients.length > 1 ? '（共 ' + parsedClients.length + ' 家）' : ''),
+      '网上定价发行量：' + r.fields.issue + ' ' + (r.fields.issueUnit || '股'),
+      '每号股数/张数：' + r.fields.shares,
+      '申购配号总数：' + r.fields.total,
+      '中签率：' + r.fields.rate + ' %'];
+    r.notes.forEach(function(n){ lines.push('※ ' + n); });
+    lines.push('嘉宾与公证信息需手工补充，确认无误后点「生成主持稿」。');
+    setPdfStatus(lines.join('\n'), 'ok');
+  }
+
   function runParse(){
+    pendingParse = null;
+    applyParseBtn.style.display = 'none';
     var file = fPdfFile.files && fPdfFile.files[0];
     var rawUrl = fPdfUrl.value.trim();
     if(!file && !rawUrl){ setPdfStatus('请先粘贴公告网址或选择本地 PDF 文件（移动端：长按输入框 → 粘贴，再点本按钮）', 'err'); pdfBtn.disabled = false; return; }
+    var parseSnapshot = JSON.stringify(collectRaw());
     setPdfStatus('正在加载 PDF 解析组件…');
     loadPdfJs().then(function(){
       if(file){
@@ -2462,55 +2342,28 @@ if(typeof document !== 'undefined'){
     }).then(function(text){
       var r = parseAnnouncement(text);
       if(!r.ok) throw new Error(r.error);
-      fType.value = r.fields.ceremony;
-      syncTypeLabels();
-      document.getElementById('fCompany').value = r.fields.company;
-      document.getElementById('fClient').value = r.fields.client;
-      /* 嘉宾（主承销商）公司名称联动：为空、或仍是上次解析的同步值 → 跟随本次解析（防"委托方与嘉宾公司不是同一家"的串稿）；
-         用户手工改成别的值 → 保留 */
-      var fcg = document.getElementById('fClientGuestCo');
-      if(!fcg.value.trim() || fcg.value.trim() === lastParsedClient) fcg.value = r.fields.client;
-      lastParsedClient = r.fields.client;
-      document.getElementById('fIssue').value = r.fields.issue;
-      document.getElementById('fShares').value = r.fields.shares;
-      document.getElementById('fTotal').value = r.fields.total;
-      document.getElementById('fRate').value = r.fields.rate;
-      /* 中签数与配号区间均由本次公告派生：清空上一份公告/手工旧值，强制按新数据重新自动计算（嘉宾与公证信息仍保留） */
-      document.getElementById('fWinCount').value = '';
-      document.getElementById('fRange').value = '';
-      var lines = ['解析成功，已填充以下字段，请核对：',
-        '发行公司：' + r.fields.company,
-        '主承销商：' + r.fields.client,
-        '网上定价发行量：' + r.fields.issue + ' ' + (r.fields.issueUnit || '股'),
-        '每号股数/张数：' + r.fields.shares,
-        '申购配号总数：' + r.fields.total,
-        '中签率：' + r.fields.rate + ' %'];
-      r.notes.forEach(function(n){ lines.push('※ ' + n); });
-      lines.push('嘉宾与公证信息需手工补充，确认无误后点「生成主持稿」。');
-      setPdfStatus(lines.join('\n'), 'ok');
+      /* 抓取期间表单被修改时不静默覆盖：暂存结果，由用户明确点击应用 */
+      if(JSON.stringify(collectRaw()) !== parseSnapshot){
+        pendingParse = r;
+        applyParseBtn.style.display = '';
+        setPdfStatus('公告已解析完成，但检测到表单已修改，未自动覆盖。请核对后点击「应用解析结果」。', 'err');
+        return;
+      }
+      applyParsedAnnouncement(r);
     }).catch(function(err){
       setPdfStatus('解析失败：' + (err && err.message ? err.message : err), 'err');
     }).then(function(){ pdfBtn.disabled = false; });
   }
 
-  /* 摇号说法查阅表：固定模板，页底常驻、可单独导出（不属于主持稿导出内容） */
-  document.getElementById('lookupDoc').innerHTML =
-    '<table class="print-table pb"><thead><tr><td>' + pageHeaderHtml(null) +
-    '</td></tr></thead><tbody><tr><td>' + docToPreviewHtml(lookupParas(), null) + '</td></tr></tbody></table>';
-  document.getElementById('lookupDocxBtn').addEventListener('click', function(){
-    if(wxGuard()) return;
-    var blob = docToDocxBlob(lookupParas(), undefined, null);
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = '摇号说法查阅表.docx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  applyParseBtn.addEventListener('click', function(){
+    if(!pendingParse) return;
+    applyParsedAnnouncement(pendingParse);
+    pendingParse = null;
+    applyParseBtn.style.display = 'none';
   });
 
-  /* 初始：1 位主承销商嘉宾空行、标签同步 */
-  addGuestRow(clientGuestRows);
+  /* 初始：1 家主承销商及 1 位空白嘉宾、标签同步 */
+  setClientBlocks([{client:'', guestCo:'', guests:[{}]}]);
   syncTypeLabels();
   renderSkeleton();
 }
