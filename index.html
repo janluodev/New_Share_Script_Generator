@@ -94,15 +94,16 @@ fieldset .btn-row{margin-top:12px}   /* fieldset 内网格与按钮行的间距�
 .client-block-head .btn-del{width:40px;height:40px;margin-top:0}
 
 /* 稿内现场填写 */
-.lv{font:inherit;letter-spacing:inherit;border:none;border-bottom:2px solid #000;background:var(--blue-50);border-radius:4px 4px 0 0;color:#000;font-weight:700;text-align:center;padding:0 2px;margin:0 1px}
-.lv:focus{outline:none;background:#fff;border-bottom-color:#000}
+.lv{font:inherit;letter-spacing:inherit;border:none;background:var(--blue-50);border-radius:4px 4px 0 0;color:#000;font-weight:700;text-align:center;padding:0 2px;margin:0 1px}
+.lv:focus{outline:none;background:#fff}
 .lv.dig{width:2.4ch}
 .lv.exp{max-width:100%}
+.lv-exp-print{display:none}   /* 屏幕只显示输入框；打印改用可折行文本，防长号码被截断 */
 .live-alert{margin:0 0 12px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:.92rem;color:var(--blue-dark)}
 .live-alert.bad{color:var(--red)}
 .live-alert.warn{color:#b45309}
-.lvcomp{border-bottom:2px solid #000;padding:0 2px}
-.lv-bad{border-bottom-color:var(--red)!important;background:#fee2e2!important}
+.lvcomp{padding:0 2px}
+.lv-bad{background:#fee2e2!important}
 .lv-addrow{margin:4px 0}
 .lv-addrow .btn-sm{margin-top:0;border-style:dashed}
 @media (max-width:600px){
@@ -133,26 +134,25 @@ tr.hidden-step td{color:var(--muted);background:#fafbfd}
   overflow-wrap:anywhere;      /* 长下划线/空格串在窄屏可折行，防横向溢出 */
   margin:0 0 4pt;              /* 单倍行距，段后 4pt＝Word w:after=80twips */
 }
-.script-doc .v{color:#000;font-size:14pt;font-weight:700}   /* 填入/计算值：黑色四号加粗 */
-.script-doc .v.u{text-decoration:underline}                 /* 仅参考稿指定类别加下划线 */
-.script-doc .b{color:#000;font-size:14pt;font-weight:700;text-decoration:underline} /* 机号与倒数位次 */
-.script-doc .g{color:#000;font-size:12pt;font-style:italic} /* 原现场提示语：黑色小四斜体 */
+.script-doc .v{color:#000;font-size:14pt;font-weight:700;text-decoration:none}   /* 填入/计算值：黑色四号加粗，无下划线 */
+.script-doc .b{color:#000;font-size:14pt;font-weight:700;text-decoration:none} /* 机号与倒数位次：黑色四号加粗，无下划线 */
+.script-doc .g{color:#000;font-size:12pt;font-style:italic;text-decoration:underline} /* 括号斜体注释：黑色小四斜体下划线 */
 .script-doc .m{color:#000;font-size:12pt}
 
 .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
 
-/* 现场实时辅助输入框：打印时去掉底色与下划线，保留数值；
-   空值输入框保留灰色下划线供纸面手写（beforeprint 时按 value 打 lv-empty 标记，见 JS） */
+/* 现场实时辅助输入框：打印时去掉底色，保留数值；长展开号码用可折行文本替代输入框。 */
 @media print{
-  .lv,.lvcomp{border-bottom-color:transparent;background:none}
-  .lv.lv-empty{border-bottom:2px solid #94a3b8 !important}
+  .lv,.lvcomp{background:none !important}
+  .lv.exp{display:none}
+  .lv-exp-print{display:inline;white-space:normal;overflow-wrap:anywhere}
   .lv-addrow{display:none}
 }
 
 /* 页眉块（预览顶部一次 + 打印每页重复）：左对齐三行速查 + 配号总数（首位三号加粗） */
 .page-header{text-align:left;font-size:12pt;line-height:1.4;border-bottom:1px dashed var(--line);padding-bottom:6px;margin-bottom:12px}
-.page-header .v{color:#000;font-weight:700}
+.page-header .v{color:#000;font-size:12pt;font-weight:700}
 .page-header .big{font-size:16pt;font-weight:700}   /* 配号总数首位：小四→三号 */
 /* 打印逐页页眉：真实 <table><thead> 结构（Chrome 打印每页重复 thead 并预留位置；CSS display 模拟不重复，勿改回） */
 .print-table{width:100%;border-collapse:collapse;table-layout:fixed;white-space:normal}   /* fixed：列宽由容器定，窄屏不横向撑开；normal：覆盖全局 table nowrap */
@@ -552,7 +552,7 @@ function computeLive(v, st){
     xs.forEach(function(x){ add += coverCount(x, g.N, total); });
     /* 名额守护为"软警示"：本工具是现场记录辅助，不越权否决现场系统；
        覆盖数仍计入，但给出醒目提示供人工核对（防录错） */
-    var warn = add > wc - used ? '本轮覆盖 ' + add + ' 个，超出剩余名额（剩 ' + (wc - used) + ' 个），请核对现场系统' : null;
+    var warn = add > wc - used ? '本轮覆盖 ' + add + ' 个，超出剩余名额（剩 ' + Math.max(0, wc - used) + ' 个），请核对现场系统' : null;
     xs.forEach(function(x){ produced.push({N:g.N, x:x}); });
     return {xs:xs, add:add, warn:warn};
   }
@@ -614,8 +614,9 @@ function computeLive(v, st){
     if(/^\d+$/.test(tailStr) && tailStr.length === v.D - 1){
       T = Number(tailStr);
       var hi = T > LD ? firstDigit - 1 : firstDigit;
+      var lo = T === 0 ? 1 : 0;   /* 尾号全 0 时，最高位 0 会组成无效号码 0，不列入可用球 */
       var basePool = [];
-      for(var b2 = 0; b2 <= hi; b2++) basePool.push(b2);
+      for(var b2 = lo; b2 <= hi; b2++) basePool.push(b2);
       pool = basePool.filter(function(b){ return drawnLeads.indexOf(b) < 0; });
       /* 通用兜底：可用球被此前轮次耗尽时按基集重新放回（尾数不同，号码天然不同） */
       if(pool.length === 0) pool = basePool.slice();
@@ -657,10 +658,10 @@ function computeLive(v, st){
 function resolvePdfUrl(raw){
   var s = String(raw == null ? '' : raw).trim();
   if(!s) return {ok:false, error:'请输入公告 PDF 网址，或选择本地 PDF 文件'};
-  /* 〇 从任意粘贴文本中提取链接：优先 cninfo 系域名（可无协议头），否则首个 http(s) 链接 */
+  /* 〇 从任意粘贴文本中提取链接：优先 cninfo 系域名（可无协议头），否则首个 http(s) 链接；剥掉末尾中英文标点 */
   var m0 = s.match(/(?:https?:\/\/)?(?:webchat|www|static)\.cninfo\.com\.cn\/[^\s"'<>()（）【】，。；、：！？]+/i) ||
            s.match(/https?:\/\/[^\s"'<>()（）【】，。；、：！？]+/i);
-  if(m0) s = m0[0].replace(/[.…]+$/g, '');
+  if(m0) s = m0[0].replace(/[.,;!?…]+$/g, '');
   if(!/^https?:\/\//i.test(s) && /^(?:webchat|www|static)\.cninfo\.com\.cn\//i.test(s)) s = 'https://' + s;
   var m = s.match(/[?&]obj=([^&]+)/);
   if(m){
@@ -688,7 +689,7 @@ function resolvePdfUrl(raw){
 }
 
 /* PDF 提取文本常带换行与字间空格（如"配 号 总 数 为"），行内空格全去、行再拼接；
-   1~2 位纯数字行通常视为页码剔除，但若前后行也是数字/数字结尾则视为长数碎片保留，防误删配号 */
+   1~2 位纯数字行通常视为页码剔除，但若前行以数字/逗号结尾，且后行以数字或数量单位开头，则视为长数碎片保留 */
 function normalizePdfText(raw){
   var lines = String(raw || '').split(/\r?\n/);
   var kept = [];
@@ -698,7 +699,7 @@ function normalizePdfText(raw){
     if(/^\d{1,2}$/.test(t)){
       var prev = (lines[i - 1] || '').replace(/\s+/g, '');
       var next = (lines[i + 1] || '').replace(/\s+/g, '');
-      var continuation = /[\d,]$/.test(prev) && /^(?:\d|个)/.test(next);
+      var continuation = /[\d,]$/.test(prev) && /^(?:\d|个|股|万|张|手|元)/.test(next);
       if(!continuation) continue;
     }
     kept.push(t);
@@ -726,9 +727,10 @@ function parseAnnouncement(rawText){
   function cap(re){ var m = text.match(re); return m ? m[1] : null; }
   var fields = {}, notes = [], missing = [];
 
-  var company = cap(/发行人[：:]([^，。；：、]{4,50}?(?:股份有限公司|有限责任公司|股份公司|有限公司))/) ||
-                cap(/([^，。；：、]{4,50}?股份有限公司)首次公开发行/) ||
-                cap(/([^，。；：、]{4,50}?(?:股份有限公司|有限责任公司|股份公司|有限公司))(?:向不特定对象|公开)发行可转换公司债券/);
+  /* 公司名首字符限中文/英文：公告编号等数字前缀与公司名连排时，不得混入解析结果 */
+  var company = cap(/发行人[：:]([\u4e00-\u9fa5A-Za-z][^，。；：、]{3,49}?(?:股份有限公司|有限责任公司|股份公司|有限公司))/) ||
+                cap(/([\u4e00-\u9fa5A-Za-z][^，。；：、]{3,49}?股份有限公司)首次公开发行/) ||
+                cap(/([\u4e00-\u9fa5A-Za-z][^，。；：、]{3,49}?(?:股份有限公司|有限责任公司|股份公司|有限公司))(?:向不特定对象|公开)发行可转换公司债券/);
   if(company) fields.company = company; else missing.push('发行公司全称');
 
   /* 主承销商：按角色顺序收集全部公司并去重（保荐人/保荐机构优先于独立联席），支持顿号或“和/与/及”列举、
@@ -754,17 +756,18 @@ function parseAnnouncement(rawText){
     /(?:联席)?保荐人[（(](?:联席)?主承销商[）)][：:]/g,
     /(?:联席)?保荐机构[（(](?:联席)?主承销商[）)][：:]/g,
     /联席主承销商[：:]/g,
-    /(?<!副)主承销商[：:]/g
+    /主承销商[：:]/g
   ];
   for(var ci = 0; ci < CLIENT_LABELS.length; ci++){
     var re = CLIENT_LABELS[ci], lm;
     while((lm = re.exec(text))){
+      if(text.charAt(lm.index - 1) === '副') continue;   /* 排除副主承销商；不用后行断言，兼容旧版 Safari */
       addClientsFromSegment(text.slice(re.lastIndex, re.lastIndex + 240), lm.index, ci);
     }
   }
   if(!clientList.length){
-    /* 头部留白版式：公司名在“以下简称‘保荐人（主承销商）’”之前 */
-    var chit = text.match(/(?:和|与|及)?([^，。；：、]{4,60}?(?:股份有限公司|有限责任公司|股份公司|有限公司))（以下简称["“]?保荐人[（(]主承销商[）)]/);
+    /* 头部留白版式：仅从句首或连接词后捕获公司名，排除括号/引号，防跨句带入发行人 */
+    var chit = text.match(/(?:^|[和与及；。])([\u4e00-\u9fa5A-Za-z][^，。；：、（）()"'“”]{3,59}?(?:股份有限公司|有限责任公司|股份公司|有限公司))（以下简称["“]?保荐人[（(]主承销商[）)]/);
     if(chit) addClient(chit[1], chit.index, 0);
   }
   clientList.sort(function(a, b){ return a.priority - b.priority || a.index - b.index; });
@@ -993,19 +996,19 @@ function numberSteps(shown){
 /* ============ 文档构建（段落 = run 数组；run={t:文本, c:'r'强调|'g'斜体|'b'机号位次|无}） ============ */
 
 function B(t){ return {t:t}; }   /* 黑色小四普通正文 */
-function R(t, underline){ return {t:t, c:'r', u:underline !== false}; }   /* 黑色四号加粗；默认下划线 */
-function BD(t){ return {t:t, c:'b'}; }   /* 黑色四号加粗并加下划线：摇号机号与倒数位次 */
+function R(t){ return {t:t, c:'r', u:false}; }   /* 黑色四号加粗，无下划线 */
+function BD(t){ return {t:t, c:'b', u:false}; }   /* 黑色四号加粗，无下划线：摇号机号与倒数位次 */
 function G(t){
-  /* 黑色小四斜体：统一加括号（括号同样式）；已带括号的跳过 */
+  /* 黑色小四斜体下划线：统一加括号（括号同样式）；已带括号的跳过 */
   if(!/^[(（]/.test(t) && !/[)）]$/.test(t)) t = '（' + t + '）';
-  return {t:t, c:'g'};
+  return {t:t, c:'g', u:true};
 }
 /* live run：可填写/自动计算的空白位。kind: digit 单位数字 | num 号码 | text 自由文本 | comp 计算值；
-   blank = 空白时渲染的下划线数量（与原模板逐字一致）；extra 附带 N/pos/r/u 等元数据，默认不下划线 */
+   blank = 空白时渲染的下划线数量（与原模板逐字一致）；extra 附带 N/pos/r 等元数据，不加下划线 */
 function LV(id, kind, blank, extra){
   var live = {id:id, kind:kind, blank:blank};
   if(extra) for(var k in extra) live[k] = extra[k];
-  return {t:'', c:'r', u:!!(extra && extra.u === true), live:live};
+  return {t:'', c:'r', u:false, live:live};
 }
 /* 加轮按钮占位段：预览渲染为按钮行，文本/Word 导出时整段跳过 */
 function ADDBTN(where){ return [{t:'', live:{kind:'addBtn', where:where}}]; }
@@ -1018,7 +1021,7 @@ function passParas(N, guest, lp, dropHint){
   passes.forEach(function(ps, i){
     var intro = [B(ps.conn + ' '), BD(ps.machines.join('、')), B('号机 ' +
       (ps.machines.length > 1 ? '分别摇出' : '摇出') + ' 此组号码的 倒数第'),
-      BD(ps.digits.join('、')), B('位， ')];   /* 机号与倒数位次均为黑色四号加粗下划线 */
+      BD(ps.digits.join('、')), B('位， ')];   /* 机号与倒数位次均为黑色四号加粗，无下划线 */
     if(i === 0){
       out.push(intro);
       if(guest){
@@ -1103,7 +1106,7 @@ function lastRoundParas(v, r){
   out.push([]);
   out.push([G('次数：1、 2、 3、 4、 5、 6、 7、 8、 9')]);
   out.push([]);
-  out.push([R('下面我们摇出  第'), LV(lp + '_idx', 'comp', 5, {r:r, u:true}), R('个（最后一个）  ' + D + ' 位数的中签号码。')]);
+  out.push([R('下面我们摇出  第'), LV(lp + '_idx', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码。')]);
   passParas(D - 1, null, lp, true).forEach(function(p){ out.push(p); });
   out.push([R(D + ' 位数的后  ' + (D - 1) + ' 位号码已经产生，是', false), LV(lp + 'tail', 'num', 12, {N:D - 1})]);
   out.push([]);
@@ -1111,7 +1114,7 @@ function lastRoundParas(v, r){
   out.push([]);
   out.push([G('（大于的情况下：使用号球 0～' + (Number(v.firstDigit) - 1) + '）')]);
   out.push([G('（小于或等于的情况下：使用号球 0～' + v.firstDigit + '）')]);
-  out.push([G('（只剩下一个可选号码：'), B(' '), R('系统自动分配 倒数第  ' + D + ' 位号码为 ', false), LV(lp + 'assign', 'num', 5, {N:1}), B('  '), G('）')]);
+  out.push([G('（只剩下一个可选号码：'), B(' '), R('系统自动分配 倒数第 ' + D + ' 位号码为 ', false), LV(lp + 'assign', 'num', 5, {N:1}), B('  '), G('）')]);
   out.push([]);   /* 情形行与放球句之间空行 */
   out.push([B('请工作人员将'), BD('1'), B('号机的全部号码球取出，将以下号码球放入摇号机中：')]);
   out.push([G('（连续的数字念：“几至几”，随后再配合礼仪用汉字单独念一遍）')]);
@@ -1125,6 +1128,21 @@ function lastRoundParas(v, r){
   out.push([R('第', false), LV(lp + '_idx2', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码已经产生，是', false), LV(lp + 'final', 'num', 22, {N:D})]);
   out.push([]);
   return out;
+}
+
+/* 正文连续半角空格统一为一个（含相邻文字 run 的边界）；live 填写位与全角对齐缩进不改动。 */
+function normalizeDocSpaces(doc){
+  doc.forEach(function(p){
+    var prevSpace = false;
+    p.forEach(function(r){
+      if(r.live){ prevSpace = false; return; }
+      var text = r.t.replace(/ {2,}/g, ' ');
+      if(prevSpace) text = text.replace(/^ /, '');
+      r.t = text;
+      if(text) prevSpace = / $/.test(text);
+    });
+  });
+  return doc;
 }
 
 /* 生成完整主持稿（段落数组，空数组 = 空行）；rounds = {p2: 倒数第二步轮数, last: 最后一步轮数} */
@@ -1262,7 +1280,7 @@ function buildDocument(v, rounds){
   var lastTitle = G(K + 2 + ' 、最后一步');
   lastTitle.brk = true;   /* 导出时末步单独成页（docx 分页符 / 打印 break-before） */
   P([lastTitle]);
-  P([R('经计算，现在还有 '), LV('remainingEcho', 'comp', 4, {u:true}), R(' 个 ' + D + ' 位数的中签号码未产生。')]);
+  P([R('经计算，现在还有 '), LV('remainingEcho', 'comp', 4), R(' 个 ' + D + ' 位数的中签号码未产生。')]);
   for(var rl = 1; rl <= rounds.last; rl++){
     lastRoundParas(v, rl).forEach(function(p){ P(p); });
   }
@@ -1285,7 +1303,7 @@ function buildDocument(v, rounds){
   P([B('下面有请嘉宾上台拍照留念！')]);
   P([B('先拍摄单人照再拍摄合影！')]);
 
-  return doc;
+  return normalizeDocSpaces(doc);
 }
 
 /* 空表状态下的主持稿示意骨架：固定话术照常显示，表单决定的部分一律留白 */
@@ -1361,7 +1379,7 @@ function buildSkeletonDoc(type){
   P([B('下面有请嘉宾上台拍照留念！')]);
   P([B('先拍摄单人照再拍摄合影！')]);
 
-  return doc;
+  return normalizeDocSpaces(doc);
 }
 
 /* ============ 渲染：纯文本 / 网页预览 / Word（.docx） ============ */
@@ -1395,7 +1413,7 @@ function escXml(s){
 /* 属性上下文转义（input value="…"）：防引号突破属性 */
 function escAttr(s){ return escHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
-/* 页眉块 HTML（预览与打印共用）：左对齐三行速查——1–5、6–10、11–12；行2 以 5em 缩进（6 与行1 的 1 对齐），
+/* 页眉块 HTML（预览与打印共用）：左对齐三行速查——1–5、6–10、11–12；行2、行3 以 5em 缩进（6、11 与行1 的 1 对齐），
    配号总数单独一行（首位三号加粗；占位符不放大）；条目用 inline-block 包裹，窄屏只在完整条目之间折行 */
 function pageHeaderHtml(total){
   function items(arr){ return arr.map(function(t){ return '<span class="cheat-item">' + t + '</span>'; }).join(''); }
@@ -1411,7 +1429,7 @@ function pageHeaderHtml(total){
   return '<div class="page-header">' +
     '<div class="cheat"><span class="cheat-label">末位尾数：</span>' + items(['1→十分之','2→百分之','3→千分之','4→万分之','5→十万分之']) + '</div>' +
     '<div class="cheat"><span class="cheat-indent" aria-hidden="true"></span>' + items(['6→百万分之','7→千万分之','8→亿分之','9→十亿分之','10→百亿分之']) + '</div>' +
-    '<div class="cheat">' + items(['11→千亿分之','12→万亿分之']) + '</div>' +
+    '<div class="cheat"><span class="cheat-indent" aria-hidden="true"></span>' + items(['11→千亿分之','12→万亿分之']) + '</div>' +
     totalLine + '</div>';
 }
 
@@ -1439,13 +1457,17 @@ function docToPreviewHtml(doc, state){
           var w = lv.kind === 'digit' ? '' :
             ' style="width:' + (lv.exp ? Math.min((lv.N + 1) * ((lv.m || 2) - 1) + 2, 70) : (lv.N ? lv.N + 2 : lv.blank + 1)) + 'ch"';
           var cls = 'v lv ' + (lv.kind === 'digit' ? 'dig' : lv.kind === 'text' ? 'txt' : 'num') + (lv.exp ? ' exp' : '') + (r.u ? ' u' : '');
-          return '<input class="' + cls + '" data-live="' + lv.id + '" value="' + escAttr(val) + '"' + w +
+          var inputHtml = '<input class="' + cls + '" data-live="' + lv.id + '" value="' + escAttr(val) + '"' + w +
             ' aria-label="' + (lv.kind === 'digit' ? '倒数第' + lv.pos + '位' : lv.kind === 'text' ? '现场填写' : '号码') + '"' +
             (lv.kind === 'digit' ? ' maxlength="1" inputmode="numeric"' : '') + ' autocomplete="off" spellcheck="false">';
+          if(lv.exp){
+            return '<span class="v lvcomp lv-exp-print" data-live="' + lv.id + '">' + escHtml(val || blankOf(lv)) + '</span>' + inputHtml;
+          }
+          return inputHtml;
         }
         var t = escHtml(r.t);
         if(r.c === 'r') return '<span class="v' + (r.u === false ? '' : ' u') + '">' + t + '</span>';
-        if(r.c === 'b') return '<span class="b">' + t + '</span>';   /* 黑色四号加粗下划线：机号与倒数位次 */
+        if(r.c === 'b') return '<span class="b">' + t + '</span>';   /* 黑色四号加粗，无下划线：机号与倒数位次 */
         if(r.c === 'g') return '<span class="g">' + t + '</span>';
         if(r.c === 'm') return '<span class="m">' + t + '</span>';
         return t;
@@ -1508,7 +1530,7 @@ function zipStore(entries){
   return new Blob(chunks, {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
 
-/* 页眉部件：左对齐三行速查（1–5、6–10、11–12），行2 以 5 个全角空格缩进使 6 与行1 的 1 对齐；
+/* 页眉部件：左对齐三行速查（1–5、6–10、11–12），行2、行3 以 5 个全角空格缩进使 6、11 与行1 的 1 对齐；
    配号总数单独一行：小四黑色加粗，首位三号 16pt；total 传 null 时不输出配号总数行 */
 function headerXml(total){
   function para(runs){ return '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>' + runs + '</w:p>'; }
@@ -1529,13 +1551,13 @@ function headerXml(total){
     '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
     para(run('末位尾数：1→十分之  2→百分之  3→千分之  4→万分之  5→十万分之', false, 24)) +
     para(run('　　　　　6→百万分之  7→千万分之  8→亿分之  9→十亿分之  10→百亿分之', false, 24)) +
-    para(run('11→千亿分之  12→万亿分之', false, 24)) +
+    para(run('　　　　　11→千亿分之  12→万亿分之', false, 24)) +
     totalPara +
     '</w:hdr>';
 }
 
 /* 由文档模型生成真实 .docx：A4、2.5cm 页边距、宋体（SimSun）、单倍行距、文字全黑；
-   正文小四 12pt，强调四号 14pt；R 按 u 决定下划线，BD 机号/位次固定下划线，G 为斜体；
+   正文小四 12pt，强调四号 14pt；R、BD 不加下划线，G 为斜体下划线；
    live run 经 resolve 带当前值（空则留白），addBtn 段整段跳过；主稿单 section，header1 逐页显示 */
 function docToDocxBlob(doc, resolve, headerTotal){
   function runXml(r){
@@ -1550,7 +1572,7 @@ function docToDocxBlob(doc, resolve, headerTotal){
       '<w:color w:val="000000"/>' +
       '<w:spacing w:val="14"/>' +                  /* 字距约 0.06em（小四 12pt×0.06≈0.72pt＝14/20pt） */
       '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' +
-      (r.c === 'b' || (r.c === 'r' && r.u !== false) ? '<w:u w:val="single"/>' : '') +
+      (r.c === 'g' ? '<w:u w:val="single"/>' : '') +
       '</w:rPr><w:t xml:space="preserve">' + t + '</w:t></w:r>';
   }
   var sectPr = function(rid){
@@ -2156,13 +2178,6 @@ if(typeof document !== 'undefined'){
 
   printBtn.addEventListener('click', function(){ if(wxGuard()) return; window.print(); });
 
-  /* 打印前：空值输入框打 lv-empty 标记 → 打印时保留下划线供纸面手写（与 Word 留白一致） */
-  window.addEventListener('beforeprint', function(){
-    document.querySelectorAll('.script-doc input.lv').forEach(function(el){
-      el.classList.toggle('lv-empty', !el.value.trim());
-    });
-  });
-
   /* ---- 公告 PDF 解析（PDF.js 按需从 CDN 加载，主页面保持零依赖） ---- */
   var PDFJS_CDNS = [
     {lib:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
@@ -2252,7 +2267,7 @@ if(typeof document !== 'undefined'){
         return Promise.reject(new Error('无法抓取该 PDF：目标网站不允许跨域访问，公共代理也不可用。请先在浏览器中打开该链接、把 PDF 保存到本地（或转发到电脑），再改用「选择本地 PDF 文件」解析。'));
       }
       var u = attempts[i++];
-      /* 首跳为自建 Worker（其内部上游 10s×2+重试最坏 ≈21s）：放宽到 25s，其余尝试 15s */
+      /* 首跳为自建 Worker：25s 后转其他线路（Worker 重试/重定向可能仍在后台继续），其余尝试 15s */
       return timedFetch(u, i === 1 ? 25000 : 15000).then(function(resp){
         if(!resp.ok) throw new Error('HTTP ' + resp.status);
         return resp.arrayBuffer();
