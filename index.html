@@ -261,7 +261,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     </div>
     <div id="clientBlocks"></div>
     <div class="btn-row"><button class="btn ghost btn-sm" id="addClient" type="button">＋ 增加主承销商</button></div>
-    <div class="hint">每家主承销商均可填写公司及最多 2 位嘉宾；有发行人嘉宾时先邀请发行人，再按主承销商 1、2……顺序邀请，姓名留空以字母代替。</div>
+    <div class="hint">联席公司名称均保留在委托句；嘉宾以填写姓名视为出席，未填姓名的联席嘉宾不出场。仅第一家主承销商无实名嘉宾时默认补 A；有发行人嘉宾时最先邀请。</div>
   </fieldset>
   <fieldset>
     <legend>嘉宾（发行人，可选）</legend>
@@ -270,7 +270,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     </div>
     <div id="issuerGuestRows"></div>
     <button class="btn ghost btn-sm" id="addIssuerGuest" type="button">＋ 增加发行人嘉宾</button>
-    <div class="hint">填写后才出现发行人介绍、承诺书签署、选球及上台摇号话术；未填写时全程由主承销商嘉宾参与，最多 2 位。</div>
+    <div class="hint">填写嘉宾姓名后才出现发行人介绍、承诺书签署、选球及上台摇号话术；只填职务或未填姓名均不出场，最多 2 位。</div>
   </fieldset>
   <fieldset>
     <legend>公证</legend>
@@ -910,16 +910,22 @@ function prepareData(raw){
   }
   var rawClients = Array.isArray(raw.clients) ? raw.clients : [{client:raw.client, guestCo:raw.clientGuestCo, guests:raw.clientGuests || []}];
   if(!rawClients.length) return fail('请填写委托（主承销商）全称');
-  var clients = [], ig = parseGuests(raw.issuerGuests || []);
+  var clients = [], ig = parseGuests(raw.issuerGuests || []).filter(function(g){ return !!g.name; });
   for(var ci = 0; ci < rawClients.length; ci++){
     var rc = rawClients[ci] || {};
     var cname = (rc.client || '').trim();
     if(!cname) return fail(ci === 0 ? '请填写委托（主承销商）全称' : '请填写第 ' + (ci + 1) + ' 家主承销商全称');
-    clients.push({client:cname, guestCo:(rc.guestCo || '').trim() || cname, guests:parseGuests(rc.guests || [])});
+    var rows = parseGuests(rc.guests || []), named = rows.filter(function(g){ return !!g.name; });
+    /* 仅第一家主承销商无实名嘉宾时保留一个默认嘉宾 A；其他公司只接受实名出席嘉宾 */
+    if(ci === 0 && !named.length){
+      var first = rows[0] || {title:'主承销商代表', name:'', honor:'先生'};
+      named = [{title:first.title, name:'', honor:first.honor}];
+    }
+    clients.push({client:cname, guestCo:(rc.guestCo || '').trim() || cname, guests:named});
   }
   v.issuerGuestCo = (raw.issuerGuestCo || '').trim() || v.company;
 
-  /* 发行人嘉宾留空时不生成任何发行人话术；每家主承销商空缺组自动补 1 位字母嘉宾。
+  /* 发行人及联席承销商未填姓名均视为未出席；第一家主承销商无实名嘉宾时才补默认 A。
      人名空缺按出场顺序 A、B、C… 代替（有发行人时先发行人，再各承销商、公证员、公证人员）；
      职务空缺才用角色名，填写职务时原样展示 */
   var letterN = 0;
@@ -934,8 +940,7 @@ function prepareData(raw){
   }
   ig.forEach(function(g){ fillGuest(g, '发行人代表'); });
   clients.forEach(function(c){
-    if(!c.guests.length) c.guests.push({title:'主承销商代表', name:letter(), honor:'先生'});
-    else c.guests.forEach(function(g){ fillGuest(g, '主承销商代表'); });
+    c.guests.forEach(function(g){ fillGuest(g, '主承销商代表'); });
   });
   v.clients = clients;
   v.issuerGuests = ig;
@@ -1581,9 +1586,23 @@ function headerXml(total){
     '</w:hdr>';
 }
 
+/* 页脚部件：底部居中显示“第 PAGE 页”；fldSimple 由 Word/WPS 按实际页码更新 */
+function footerXml(){
+  function run(t){
+    return '<w:r><w:rPr><w:rFonts w:ascii="SimSun" w:eastAsia="SimSun" w:hAnsi="SimSun"/>' +
+      '<w:color w:val="000000"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>' +
+      '<w:t xml:space="preserve">' + escXml(t) + '</w:t></w:r>';
+  }
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr>' +
+    run('第 ') + '<w:fldSimple w:instr="PAGE">' + run('1') + '</w:fldSimple>' + run(' 页') +
+    '</w:p></w:ftr>';
+}
+
 /* 由文档模型生成真实 .docx：A4、2.5cm 页边距、宋体（SimSun）、单倍行距、文字全黑；
    正文小四 12pt，强调四号 14pt；R、BD 不加下划线，G 为斜体下划线；
-   live run 经 resolve 带当前值（空则留白），addBtn 段整段跳过；主稿单 section，header1 逐页显示 */
+   live run 经 resolve 带当前值（空则留白），addBtn 段整段跳过；主稿单 section，header1/footer1 逐页显示 */
 function docToDocxBlob(doc, resolve, headerTotal){
   function runXml(r){
     if(r.live && r.live.kind === 'addBtn') return '';
@@ -1601,7 +1620,8 @@ function docToDocxBlob(doc, resolve, headerTotal){
       '</w:rPr><w:t xml:space="preserve">' + t + '</w:t></w:r>';
   }
   var sectPr = function(rid){
-    return '<w:sectPr><w:headerReference w:type="default" r:id="' + rid + '"/><w:pgSz w:w="11906" w:h="16838"/>' +
+    return '<w:sectPr><w:headerReference w:type="default" r:id="' + rid + '"/>' +
+      '<w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11906" w:h="16838"/>' +
       '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="851" w:footer="992" w:gutter="0"/></w:sectPr>';
   };
   var paras = doc.map(function(p){
@@ -1632,6 +1652,7 @@ function docToDocxBlob(doc, resolve, headerTotal){
     '<Default Extension="xml" ContentType="application/xml"/>' +
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
     '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
     '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
@@ -1648,6 +1669,7 @@ function docToDocxBlob(doc, resolve, headerTotal){
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
     '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
     '</Relationships>';
   var stylesXml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -1680,6 +1702,7 @@ function docToDocxBlob(doc, resolve, headerTotal){
     {name:'word/styles.xml', data:enc.encode(stylesXml)}
   ];
   files.push({name:'word/header1.xml', data:enc.encode(headerXml(headerTotal == null ? '________' : headerTotal))});
+  files.push({name:'word/footer1.xml', data:enc.encode(footerXml())});
   return zipStore(files);
 }
 
@@ -1768,7 +1791,7 @@ if(typeof document !== 'undefined'){
     var row = document.createElement('div');
     row.className = 'guest-row';
     row.innerHTML = '<input type="text" class="g-title" placeholder="职务（可空）" aria-label="嘉宾职务（可空）">' +
-      '<input type="text" class="g-name" placeholder="姓名（留空以字母代替）" aria-label="嘉宾姓名（留空以字母代替）">' +
+      '<input type="text" class="g-name" placeholder="姓名（留空视为未出席）" aria-label="嘉宾姓名（留空视为未出席）">' +
       '<select class="g-honor" aria-label="嘉宾称谓"><option>先生</option><option>女士</option></select>' +
       '<button class="btn ghost btn-del" type="button" title="删除该嘉宾" aria-label="删除该嘉宾">×</button>';
     row.querySelector('.g-title').value = (g && g.title) || '';
@@ -1921,7 +1944,7 @@ if(typeof document !== 'undefined'){
   function renderSkeleton(){
     generatedOnce = false;
     var hasIssuer = readGuestRows(issuerGuestRows).some(function(g){
-      return !!((g.title || '').trim() || (g.name || '').trim());
+      return !!((g.name || '').trim());
     });
     var doc = buildSkeletonDoc(currentType(), hasIssuer);
     currentText = docToText(doc);
