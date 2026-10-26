@@ -261,7 +261,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     </div>
     <div id="clientBlocks"></div>
     <div class="btn-row"><button class="btn ghost btn-sm" id="addClient" type="button">＋ 增加主承销商</button></div>
-    <div class="hint">每家主承销商均可填写公司及最多 2 位嘉宾；摇号按“发行人 → 主承销商 1 → 主承销商 2……”顺序邀请嘉宾，姓名留空以字母代替。</div>
+    <div class="hint">每家主承销商均可填写公司及最多 2 位嘉宾；有发行人嘉宾时先邀请发行人，再按主承销商 1、2……顺序邀请，姓名留空以字母代替。</div>
   </fieldset>
   <fieldset>
     <legend>嘉宾（发行人，可选）</legend>
@@ -270,7 +270,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
     </div>
     <div id="issuerGuestRows"></div>
     <button class="btn ghost btn-sm" id="addIssuerGuest" type="button">＋ 增加发行人嘉宾</button>
-    <div class="hint">嘉宾介绍段恒在：未填写时以字母代替（职务用"发行人代表"）；最多 2 位。</div>
+    <div class="hint">填写后才出现发行人介绍、承诺书签署、选球及上台摇号话术；未填写时全程由主承销商嘉宾参与，最多 2 位。</div>
   </fieldset>
   <fieldset>
     <legend>公证</legend>
@@ -679,7 +679,17 @@ function resolvePdfUrl(raw){
     var atime = s.match(/[?&]announcementTime=(\d{4})-(\d{1,2})-(\d{1,2})/i);
     if(aid && atime){
       var date = atime[1] + '-' + ('0' + atime[2]).slice(-2) + '-' + ('0' + atime[3]).slice(-2);
-      return {ok:true, url:'https://static.cninfo.com.cn/finalpage/' + date + '/' + aid[1] + '.PDF'};
+      var direct = 'https://static.cninfo.com.cn/finalpage/' + date + '/' + aid[1] + '.PDF';
+      /* 详情页公告日期与 finalpage 上传日期可能相差一天：保留原直链，并提供前后一天候选 */
+      var alternateUrls = [], base = new Date(date + 'T00:00:00Z');
+      if(!isNaN(base.getTime()) && base.toISOString().slice(0, 10) === date){
+        [-1, 1].forEach(function(delta){
+          var d = new Date(base.getTime());
+          d.setUTCDate(d.getUTCDate() + delta);
+          alternateUrls.push('https://static.cninfo.com.cn/finalpage/' + d.toISOString().slice(0, 10) + '/' + aid[1] + '.PDF');
+        });
+      }
+      return {ok:true, url:direct, alternateUrls:alternateUrls};
     }
     return {ok:false, error:'详情页链接缺少 announcementId 或 announcementTime 参数，请改用 PDF 直链或本地文件'};
   }
@@ -909,8 +919,9 @@ function prepareData(raw){
   }
   v.issuerGuestCo = (raw.issuerGuestCo || '').trim() || v.company;
 
-  /* 介绍与邀请恒在：空缺组自动补 1 位字母嘉宾；人名空缺按出场顺序 A、B、C… 代替
-     （发行人 → 各承销商 → 公证员 → 公证人员）；职务空缺才用角色名，填写职务时原样展示 */
+  /* 发行人嘉宾留空时不生成任何发行人话术；每家主承销商空缺组自动补 1 位字母嘉宾。
+     人名空缺按出场顺序 A、B、C… 代替（有发行人时先发行人，再各承销商、公证员、公证人员）；
+     职务空缺才用角色名，填写职务时原样展示 */
   var letterN = 0;
   function letter(){
     var n = letterN++;
@@ -921,8 +932,7 @@ function prepareData(raw){
     if(!g.name) g.name = letter();
     return g;
   }
-  if(!ig.length) ig.push({title:'发行人代表', name:letter(), honor:'先生'});
-  else ig.forEach(function(g){ fillGuest(g, '发行人代表'); });
+  ig.forEach(function(g){ fillGuest(g, '发行人代表'); });
   clients.forEach(function(c){
     if(!c.guests.length) c.guests.push({title:'主承销商代表', name:letter(), honor:'先生'});
     else c.guests.forEach(function(g){ fillGuest(g, '主承销商代表'); });
@@ -1161,11 +1171,14 @@ function buildDocument(v, rounds){
   P([B('本次摇号抽签是由')]);
   P([B(v.clients.map(function(c){ return c.client; }).join('  ') + ' 委托、深圳证券信息有限公司  承办，欢迎各位嘉宾的到来。首先让我们来认识一下参加本次摇号抽签仪式的各位嘉宾，')]);
   P([G('（每介绍一位嘉宾，中间稍作停顿，等嘉宾点头示意后，再继续介绍下一位。）')]);   /* 独立成行 */
-  P([B('来自发行人方面的嘉宾有：')]);   /* 恒在：先发行人 */
-  v.issuerGuests.forEach(function(g){
-    P([B(v.issuerGuestCo + ' ' + g.title + ' ' + g.name + ' ' + g.honor + ' ')]);
-  });
-  P([B('来自主承销商方面的嘉宾有：')]);   /* 恒在：后主承销商，逐家展示 */
+  var hasIssuer = v.issuerGuests.length > 0;
+  if(hasIssuer){
+    P([B('来自发行人方面的嘉宾有：')]);   /* 有发行人嘉宾时先介绍发行人 */
+    v.issuerGuests.forEach(function(g){
+      P([B(v.issuerGuestCo + ' ' + g.title + ' ' + g.name + ' ' + g.honor + ' ')]);
+    });
+  }
+  P([B('来自主承销商方面的嘉宾有：')]);   /* 至少一位主承销商嘉宾；有发行人时已先介绍 */
   v.clients.forEach(function(c){
     c.guests.forEach(function(g){
       P([B(c.guestCo + ' ' + g.title + ' ' + g.name + ' ' + g.honor + ' ')]);
@@ -1173,9 +1186,13 @@ function buildDocument(v, rounds){
   });
   P([B('同时还有来自' + v.office + '：' + v.notary1 + ' 公证员 和 ' + v.notary2 + ' 公证人员。')]);
   P([B('欢迎各位嘉宾的到来，并预祝' + v.company + ' '), R(v.kindInline), B(' 获得圆满成功。')]);
-  P([B('在摇号开始前，我们先请 发行人代表、主承销商代表 及 公证员 签署《公平承诺书》，承诺本次'), R(v.kindInline),
-     B(' 摇号抽签活动 客观、公平、公正，符合国家法律法规的有关规定，不存在任何虚假、舞弊行为。 首先有请  发行人代表  签署《公平承诺书》，有请  主承销商代表  签署《公平承诺书》，有请' +
-       v.notary1 + ' 公证员 和 ' + v.notary2 + ' 公证人员 签署《公平承诺书》')]);
+  var fairIntro = hasIssuer
+    ? '在摇号开始前，我们先请 发行人代表、主承销商代表 及 公证员 签署《公平承诺书》，承诺本次'
+    : '在摇号开始前，我们先请 主承销商代表 及 公证员 签署《公平承诺书》，承诺本次';
+  var fairSign = hasIssuer
+    ? ' 摇号抽签活动 客观、公平、公正，符合国家法律法规的有关规定，不存在任何虚假、舞弊行为。 首先有请  发行人代表  签署《公平承诺书》，有请  主承销商代表  签署《公平承诺书》，有请'
+    : ' 摇号抽签活动 客观、公平、公正，符合国家法律法规的有关规定，不存在任何虚假、舞弊行为。 首先有请  主承销商代表  签署《公平承诺书》，有请';
+  P([B(fairIntro), R(v.kindInline), B(fairSign + v.notary1 + ' 公证员 和 ' + v.notary2 + ' 公证人员 签署《公平承诺书》')]);
   BLANK();
 
   /* ---- 发行数据 ---- */
@@ -1191,7 +1208,7 @@ function buildDocument(v, rounds){
   BLANK();
 
   /* ---- 挑选摇号球 ---- */
-  P([B('下面有请'), R('发行人代表'), B(' 为本次摇号抽签活动随机挑选三组不同的 摇号球。')]);
+  P([B('下面有请'), R(hasIssuer ? '发行人代表' : '主承销商代表'), B(' 为本次摇号抽签活动随机挑选三组不同的 摇号球。')]);
   P([B('选出的三组号码球分别是第'), LV('ball1', 'text', 5), B('组，第'), LV('ball2', 'text', 5), B('组，第'), LV('ball3', 'text', 5), B('组，')]);
   P([B('请工作人员依次将第'), LV('ball4', 'text', 5), B('组号码球倒入1号盒中，')]);
   P([B('　　　　　　　将第'), LV('ball5', 'text', 5), B('组号码球倒入2号盒中，')]);   /* 7 个全角空格＝"请工作人员依次"宽度，"将"与上句对齐 */
@@ -1245,7 +1262,7 @@ function buildDocument(v, rounds){
       passParas(st.N, guestAt(K + 2), 'g' + (K + 2)).forEach(function(p){ P(p); });
       P(resultPara(st.N, b.m, b.interval ? fmtInterval(b.interval) : '', 'g' + (K + 2)));
       BLANK();
-      P(fanPara(st.N)); BLANK();   /* 每个环节结尾都有凡申购句（含与倒数第二步同位数时） */
+      if(st.N !== v.maxN){ P(fanPara(st.N)); BLANK(); }   /* maxN 统一在倒数第二步全部结束后收尾，避免同位数重复 */
       K += 2;
     }else{
       P([G(K + 1 + ' 、 ' + st.denom + ' 分之 ' + st.digit)]);
@@ -1253,7 +1270,7 @@ function buildDocument(v, rounds){
       passParas(st.N, guestAt(K + 1), 'g' + (K + 1)).forEach(function(p){ P(p); });
       P(resultPara(st.N, st.digit, st.interval ? fmtInterval(st.interval) : '', 'g' + (K + 1)));
       BLANK();
-      P(fanPara(st.N)); BLANK();   /* 每个环节结尾都有凡申购句（含与倒数第二步同位数时） */
+      if(st.N !== v.maxN){ P(fanPara(st.N)); BLANK(); }   /* maxN 统一在倒数第二步全部结束后收尾，避免同位数重复 */
       K += 1;
     }
   });
@@ -1306,8 +1323,10 @@ function buildDocument(v, rounds){
   return normalizeDocSpaces(doc);
 }
 
-/* 空表状态下的主持稿示意骨架：固定话术照常显示，表单决定的部分一律留白 */
-function buildSkeletonDoc(type){
+/* 空表状态下的主持稿示意骨架：固定话术照常显示，表单决定的部分一律留白；
+   hasIssuer 表示是否已填写发行人嘉宾，未填写时不出现发行人相关话术 */
+function buildSkeletonDoc(type, hasIssuer){
+  hasIssuer = !!hasIssuer;
   var unit = type === 'kzz' ? '张' : '股';
   var kindInline = type === 'kzz' ? '可转债发行' : '新股发行';
   var kindAnnoun = type === 'kzz' ? '债券发行' : '新股发行';
@@ -1324,15 +1343,21 @@ function buildSkeletonDoc(type){
   P([B('本次摇号抽签是由')]);
   P([R(RB), B(' 委托、深圳证券信息有限公司  承办，欢迎各位嘉宾的到来。首先让我们来认识一下参加本次摇号抽签仪式的各位嘉宾，')]);
   P([G('（每介绍一位嘉宾，中间稍作停顿，等嘉宾点头示意后，再继续介绍下一位。）')]);   /* 独立成行 */
-  P([B('来自发行人方面的嘉宾有：')]);   /* 恒在：先发行人 */
-  P([R(RB + ' ' + RB + ' ' + RB + ' ' + RB + ' ')]);
-  P([B('来自主承销商方面的嘉宾有：')]);   /* 恒在：后主承销商 */
+  if(hasIssuer){
+    P([B('来自发行人方面的嘉宾有：')]);
+    P([R(RB + ' ' + RB + ' ' + RB + ' ' + RB + ' ')]);
+  }
+  P([B('来自主承销商方面的嘉宾有：')]);
   P([R(RB + ' ' + RB + ' ' + RB + ' ' + RB + ' ')]);
   P([B('同时还有来自'), R(RB), B('：'), R(RB), B(' 公证员 和 '), R(RB), B(' 公证人员。')]);
   P([B('欢迎各位嘉宾的到来，并预祝'), R(RB + ' '), R(kindInline), B(' 获得圆满成功。')]);
-  P([B('在摇号开始前，我们先请 发行人代表、主承销商代表 及 公证员 签署《公平承诺书》，承诺本次'), R(kindInline),
-     B(' 摇号抽签活动 客观、公平、公正，符合国家法律法规的有关规定，不存在任何虚假、舞弊行为。 首先有请  发行人代表  签署《公平承诺书》，有请  主承销商代表  签署《公平承诺书》，有请'),
-     R(RB), B(' 公证员 和 '), R(RB), B(' 公证人员 签署《公平承诺书》')]);
+  var fairIntro = hasIssuer
+    ? '在摇号开始前，我们先请 发行人代表、主承销商代表 及 公证员 签署《公平承诺书》，承诺本次'
+    : '在摇号开始前，我们先请 主承销商代表 及 公证员 签署《公平承诺书》，承诺本次';
+  var fairSign = hasIssuer
+    ? ' 摇号抽签活动 客观、公平、公正，符合国家法律法规的有关规定，不存在任何虚假、舞弊行为。 首先有请  发行人代表  签署《公平承诺书》，有请  主承销商代表  签署《公平承诺书》，有请'
+    : ' 摇号抽签活动 客观、公平、公正，符合国家法律法规的有关规定，不存在任何虚假、舞弊行为。 首先有请  主承销商代表  签署《公平承诺书》，有请';
+  P([B(fairIntro), R(kindInline), B(fairSign), R(RB), B(' 公证员 和 '), R(RB), B(' 公证人员 签署《公平承诺书》')]);
   BLANK();
 
   P([B('本次'), R(RB), B(' ')]);
@@ -1345,7 +1370,7 @@ function buildSkeletonDoc(type){
   P([B('中签率为 '), R(RB + ' %  （百分之  ' + RB + '）')]);
   BLANK();
 
-  P([B('下面有请'), R('发行人代表'), B(' 为本次摇号抽签活动随机挑选三组不同的 摇号球。')]);
+  P([B('下面有请'), R(hasIssuer ? '发行人代表' : '主承销商代表'), B(' 为本次摇号抽签活动随机挑选三组不同的 摇号球。')]);
   P([B('选出的三组号码球分别是第_____组，第_____组，第_____组，')]);
   P([B('请工作人员依次将第_____组号码球倒入1号盒中，')]);
   P([B('　　　　　　　将第_____组号码球倒入2号盒中，')]);   /* 7 个全角空格＝"请工作人员依次"宽度 */
@@ -1749,7 +1774,10 @@ if(typeof document !== 'undefined'){
     row.querySelector('.g-title').value = (g && g.title) || '';
     row.querySelector('.g-name').value = (g && g.name) || '';
     row.querySelector('.g-honor').value = (g && g.honor) || '先生';
-    row.querySelector('.btn-del').addEventListener('click', function(){ row.remove(); syncGuestCap(); });
+    row.querySelector('.btn-del').addEventListener('click', function(){
+      row.remove(); syncGuestCap();
+      if(container === issuerGuestRows && !generatedOnce) renderSkeleton();
+    });
     container.appendChild(row);
     syncGuestCap();
   }
@@ -1892,7 +1920,10 @@ if(typeof document !== 'undefined'){
   var generatedOnce = false;
   function renderSkeleton(){
     generatedOnce = false;
-    var doc = buildSkeletonDoc(currentType());
+    var hasIssuer = readGuestRows(issuerGuestRows).some(function(g){
+      return !!((g.title || '').trim() || (g.name || '').trim());
+    });
+    var doc = buildSkeletonDoc(currentType(), hasIssuer);
     currentText = docToText(doc);
     currentDocxBlob = docToDocxBlob(doc, undefined, '________');
     currentFileName = '摇号抽签仪式主持稿.docx';
@@ -2116,7 +2147,13 @@ if(typeof document !== 'undefined'){
 
   genBtn.addEventListener('click', generate);
   addClient.addEventListener('click', function(){ addClientBlock(); });
-  addIssuerGuest.addEventListener('click', function(){ addGuestRow(issuerGuestRows); });
+  addIssuerGuest.addEventListener('click', function(){
+    addGuestRow(issuerGuestRows);
+    if(!generatedOnce) renderSkeleton();
+  });
+  issuerGuestRows.addEventListener('input', function(){
+    if(!generatedOnce) renderSkeleton();
+  });
   fType.addEventListener('change', function(){
     syncTypeLabels();
     if(generatedOnce) generate(); else renderSkeleton();
@@ -2253,7 +2290,7 @@ if(typeof document !== 'undefined'){
     function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
     function(u){ return 'https://api.cors.lol/?url=' + encodeURIComponent(u); }
   ];
-  function fetchPdfBytes(url){
+  function fetchPdfBytes(url, alternateUrls){
     var attempts = [PDF_PROXY.replace(/\/+$/, '') + '/?url=' + encodeURIComponent(url), url];
     PDF_PROXIES.forEach(function(f){ attempts.push(f(url)); });
     var i = 0;
@@ -2261,6 +2298,11 @@ if(typeof document !== 'undefined'){
       /* 每次尝试限时，防单个代理挂起拖死整个抓取 */
       if(typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return fetch(u, {signal: AbortSignal.timeout(ms)});
       return Promise.race([fetch(u), new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms); })]);
+    }
+    function validPdf(buf){
+      var head = new Uint8Array(buf, 0, Math.min(5, buf.byteLength));
+      if(String.fromCharCode.apply(null, head) !== '%PDF-') throw new Error('返回内容不是 PDF');
+      return buf;
     }
     function next(){
       if(i >= attempts.length){
@@ -2271,11 +2313,21 @@ if(typeof document !== 'undefined'){
       return timedFetch(u, i === 1 ? 25000 : 15000).then(function(resp){
         if(!resp.ok) throw new Error('HTTP ' + resp.status);
         return resp.arrayBuffer();
-      }).then(function(buf){
-        var head = new Uint8Array(buf, 0, Math.min(5, buf.byteLength));
-        if(String.fromCharCode.apply(null, head) !== '%PDF-') throw new Error('返回内容不是 PDF');
-        return buf;
-      }).catch(function(){ return next(); });
+      }).then(validPdf).catch(function(){ return next(); });
+    }
+    var candidates = [url].concat(alternateUrls || []);
+    if(candidates.length > 1){
+      /* 详情页日期候选并行经自建 Worker 核验，任一路径返回真实 PDF 即采用；全部失败再走原有回退链 */
+      var workerBase = PDF_PROXY.replace(/\/+$/, '') + '/?url=';
+      return Promise.all(candidates.map(function(candidate){
+        return timedFetch(workerBase + encodeURIComponent(candidate), 25000).then(function(resp){
+          if(!resp.ok) throw new Error('HTTP ' + resp.status);
+          return resp.arrayBuffer();
+        }).then(validPdf).catch(function(){ return null; });
+      })).then(function(buffers){
+        for(var bi = 0; bi < buffers.length; bi++) if(buffers[bi]) return buffers[bi];
+        return next();
+      });
     }
     return next();
   }
@@ -2350,7 +2402,7 @@ if(typeof document !== 'undefined'){
       var r = resolvePdfUrl(rawUrl);
       if(!r.ok) throw new Error(r.error);
       setPdfStatus('正在抓取 PDF（目标站限制跨域时会自动尝试代理）…\n' + r.url);
-      return fetchPdfBytes(r.url);
+      return fetchPdfBytes(r.url, r.alternateUrls);
     }).then(function(buf){
       setPdfStatus('正在解析 PDF 文本…');
       return extractPdfText(buf);
