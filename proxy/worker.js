@@ -5,7 +5,8 @@
  * 契约：GET /?url=<encodeURIComponent(目标URL)>
  *   → 透传上游字节流，并附加 Access-Control-Allow-Origin（白名单回显，否则固定为本站域）
  * 安全：仅允许 https 且主机在白名单内（含重定向目标），防止成为开放代理被滥用；
- *       仅 GET/HEAD；来源 Origin 不在白名单时拒绝（无 Origin 的非浏览器请求放行）。
+ *       仅 GET/HEAD；来源 Origin 不在白名单时拒绝（无 Origin 的非浏览器请求放行）；
+ *       响应按声明大小与流式字节数双重限制为 50MB。
  * 部署：见同目录 README.md
  */
 
@@ -23,8 +24,35 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:8931',
 ]);
 
+const MAX_UPSTREAM_BYTES = 50 * 1024 * 1024;
+
 function isAllowedHost(u) {
   return u.protocol === 'https:' && ALLOWED_HOSTS.has(u.hostname);
+}
+
+function limitUpstreamBody(resp) {
+  if (!resp.body) return resp;
+  const reader = resp.body.getReader();
+  let received = 0;
+  const stream = new ReadableStream({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) { controller.close(); return; }
+        received += value.byteLength;
+        if (received > MAX_UPSTREAM_BYTES) {
+          try { await reader.cancel('upstream too large'); } catch { /* 已超限，继续终止下游流 */ }
+          controller.error(new Error('upstream too large'));
+          return;
+        }
+        controller.enqueue(value);
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    async cancel(reason) { await reader.cancel(reason); },
+  });
+  return new Response(stream, resp);
 }
 
 function withCors(resp, origin) {
@@ -109,6 +137,14 @@ export default {
       /* 偶发按 IP 限流返回 403，稍候重试一次 */
       if (upstream.status !== 403) break;
       if (attempt === 0) await new Promise(r => setTimeout(r, 800));
+    }
+    if (request.method !== 'HEAD') {
+      const declared = Number(upstream.headers.get('content-length'));
+      if (declared > MAX_UPSTREAM_BYTES) {
+        if (upstream.body) await upstream.body.cancel().catch(() => {});
+        return withCors(Response.json({ error: 'upstream too large' }, { status: 413 }), corsOrigin);
+      }
+      upstream = limitUpstreamBody(upstream);
     }
     return withCors(upstream, corsOrigin);
   },

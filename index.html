@@ -252,7 +252,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
       <button class="btn ghost" id="pdfBtn" type="button">解析 PDF 并填充</button>
       <button class="btn ghost" id="applyParseBtn" type="button" style="display:none">应用解析结果</button>
     </div>
-    <div class="hint" id="pdfStatus" aria-live="polite">可解析：发行公司、主承销商、网上定价发行量、每号股数/张数、配号总数、中签率。网址抓取受目标站跨域限制，失败时请下载 PDF 后用文件解析。</div>
+    <div class="hint" id="pdfStatus" aria-live="polite">可解析：发行公司、主承销商、网上定价发行量、每号申购单位数、配号总数、中签率。单个 PDF 不超过 50MB、200 页。网址抓取受目标站跨域限制，失败时请下载 PDF 后用文件解析。</div>
   </fieldset>
   <fieldset>
     <legend>公司与委托</legend>
@@ -283,6 +283,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   <fieldset>
     <legend>发行数据与中签率</legend>
     <div class="grid">
+      <div class="fld" id="unitField" style="display:none"><label for="fUnit">可转债计量单位（1 手＝10 张）</label><select id="fUnit"><option value="张">张</option><option value="手">手</option></select></div>
       <div class="fld"><label id="lblIssue" for="fIssue">网上定价发行量（股）</label><input id="fIssue" type="text" inputmode="numeric"></div>
       <div class="fld"><label id="lblShares" for="fShares">每 N 股确定一个申购号</label><input id="fShares" type="text" inputmode="numeric"></div>
       <div class="fld"><label for="fTotal">申购配号总数</label><input id="fTotal" type="text" inputmode="numeric"></div>
@@ -607,6 +608,9 @@ function computeLive(v, st){
     if(leadStr && !/^\d$/.test(leadStr)){
       rows.push({id:'last_' + rl + 'lead', label:'最后一步·第' + rl + '轮', N:v.D, nums:leadStr, add:'', status:'机摇最高位须为 1 位数字', bad:true}); continue;
     }
+    /* 先统一补齐完整号码，再提取尾号与计算机摇球池，确保短号码与完整号码走相同校验路径 */
+    if(nf && (!/^\d+$/.test(nf) || nf.length > v.D)){ rows.push({id:'last_' + rl + 'final', label:'最后一步·第' + rl + '轮', N:v.D, nums:nf, add:'', status:'格式有误', bad:true}); continue; }
+    if(nf) nf = ('000000000000' + nf).slice(-v.D);
     /* 可用号球：按尾数与配号总数后 D−1 位比较定基集（大于→0..首位−1，小于等于→0..首位），
        再减去此前各轮已摇出的最高位（末位球摇出不再放回，每球只有一次机会） */
     if(!tailStr && nf && nf.length === v.D) tailStr = nf.slice(1);
@@ -622,8 +626,6 @@ function computeLive(v, st){
       if(pool.length === 0) pool = basePool.slice();
     }
     if(!nf){ rows.push({id:'last_' + rl + 'final', label:'最后一步·第' + rl + '轮', N:v.D, nums:'', add:'', status: pool ? (pool.length === 1 ? '仅剩 ' + pool[0] + ' 号球（系统自动分配）' : '可用号球：' + pool.join('、')) : ''}); continue; }
-    if(!/^\d+$/.test(nf) || nf.length > v.D){ rows.push({id:'last_' + rl + 'final', label:'最后一步·第' + rl + '轮', N:v.D, nums:nf, add:'', status:'格式有误', bad:true}); continue; }
-    if(nf.length < v.D) nf = ('000000000000' + nf).slice(-v.D);   /* 补前导零至配号位数（完整号码约定为 D 位） */
     if(tailStr && nf.slice(1) !== tailStr){ rows.push({id:'last_' + rl + 'final', label:'最后一步·第' + rl + '轮', N:v.D, nums:nf, add:'', status:'完整号码与已填尾号不一致，请核对', bad:true}); continue; }
     if(assignStr && nf.charAt(0) !== assignStr){ rows.push({id:'last_' + rl + 'assign', label:'最后一步·第' + rl + '轮', N:v.D, nums:nf, add:'', status:'完整号码与自动分配最高位不一致，请核对', bad:true}); continue; }
     if(!assignStr && leadStr && nf.charAt(0) !== leadStr){ rows.push({id:'last_' + rl + 'lead', label:'最后一步·第' + rl + '轮', N:v.D, nums:nf, add:'', status:'完整号码与机摇最高位不一致，请核对', bad:true}); continue; }
@@ -811,25 +813,34 @@ function parseAnnouncement(rawText){
   var total = cap(/配号(?:总数|数量|总数量)[为：:]?([\d,]+)个?/);   /* 兼容 配号总数/配号数量/配号总数量 */
   if(total) fields.total = cnNum(total); else missing.push('申购配号总数');
 
-  /* 每 N 股/张/手一个申购号：优先公告直述，否则由 有效申购数÷配号总数 推导 */
-  var shares = cap(/每(\d+)股[^，。]{0,8}?确定一个申购号/) ||
-               cap(/网上申购每(\d+)张为1个申购单位/) ||
-               cap(/每(\d+)张为1个申购单位/) ||
-               cap(/每个中签号(?:只能购买|可购买)(\d+)手/) ||
-               cap(/每(\d+)手为1个申购单位/);
+  /* 每 N 股/张/手一个申购号：优先公告直述，否则由 有效申购数÷配号总数 推导，并保留单位 */
+  var shares = null, sharesUnit = null;
+  var SHARE_RULES = [
+    {re:/每(\d+)股[^，。]{0,8}?确定一个申购号/, unit:'股'},
+    {re:/网上申购每(\d+)张为1个申购单位/, unit:'张'},
+    {re:/每(\d+)张为1个申购单位/, unit:'张'},
+    {re:/每个中签号(?:只能购买|可购买)(\d+)手/, unit:'手'},
+    {re:/每(\d+)手为1个申购单位/, unit:'手'}
+  ];
+  for(var si = 0; si < SHARE_RULES.length && !shares; si++){
+    var shareMatch = text.match(SHARE_RULES[si].re);
+    if(shareMatch){ shares = shareMatch[1]; sharesUnit = SHARE_RULES[si].unit; }
+  }
   if(shares){
     fields.shares = cnNum(shares);
+    fields.sharesUnit = sharesUnit;
   }else{
-    var sub = cap(/有效申购(?:股数|数量)[为：:]?([\d,]+)(?:股|张|手)/);
-    if(sub && fields.total){
-      var subN = Number(cnNum(sub)), totN0 = Number(fields.total);
+    var subMatch = text.match(/有效申购(?:股数|数量)[为：:]?([\d,]+)(股|张|手)/);
+    if(subMatch && fields.total){
+      var subN = Number(cnNum(subMatch[1])), totN0 = Number(fields.total);
       if(subN > 0 && totN0 > 0 && subN % totN0 === 0){
         fields.shares = String(subN / totN0);
-        notes.push('每号股数/张数公告未直述，由「有效申购数 ÷ 配号总数」推导＝' + fields.shares);
+        fields.sharesUnit = subMatch[2];
+        notes.push('每号申购单位数公告未直述，由「有效申购数 ÷ 配号总数」推导＝' + fields.shares + fields.sharesUnit);
       }
     }
   }
-  if(!fields.shares) missing.push('每号股数/张数');
+  if(!fields.shares) missing.push('每号申购单位数');
 
   /* 中签率取值顺序：回拨后/最终 > 网上定价发行 > 网上申购/网上中签率 > 兜底首个——
      避免抓到回拨前的"初步中签率"或同名网下中签率；兜底命中跳过前 8 字符含"网下/初步"的项 */
@@ -862,7 +873,7 @@ function parseAnnouncement(rawText){
   notes.push('识别公告类型：' + (fields.ceremony === 'kzz' ? '可转债发行（已自动切换仪式类型）' : '新股发行'));
   /* 沪市发行提示：承办单位/配号区间下界/单位等与深市模板不同，需人工核对 */
   if(/上海证券交易所|上交所/.test(text)){
-    notes.push('该公告为沪市发行：主持稿按深市（深圳证券信息有限公司承办、配号自 0001 起）措辞生成，承办单位、配号区间下界、计量单位（沪市可转债按"手"）等请人工核对调整');
+    notes.push('该公告为沪市发行：主持稿按深市（深圳证券信息有限公司承办、配号自 0001 起）措辞生成，承办单位、配号区间下界等请人工核对调整；可转债计量单位已按公告识别');
   }
 
   /* 交叉校验：中签号数＝发行量÷每号单位 ≈ 配号总数×中签率 */
@@ -881,6 +892,23 @@ function parseAnnouncement(rawText){
 
 /* ============ 输入整理与派生（纯函数，可测试） ============ */
 
+/* 可转债统一计量单位：同为手则保留手；张/手混用时按 1 手=10 张全部转为张，确保数量与单位一致 */
+function normalizeKzzUnits(issue, shares, issueUnit, sharesUnit, type){
+  if(type !== 'kzz') return {ok:true, issue:issue, shares:shares, unit:'股', converted:false};
+  var iu = issueUnit || '', su = sharesUnit || '';
+  if(!iu && !su){ iu = '张'; su = '张'; }
+  else if(!iu) iu = su;
+  else if(!su) su = iu;
+  if((iu !== '张' && iu !== '手') || (su !== '张' && su !== '手')) return {ok:false, error:'可转债计量单位仅支持张或手'};
+  if(iu === su) return {ok:true, issue:issue, shares:shares, unit:iu, converted:false};
+  return {
+    ok:true,
+    issue:iu === '手' && issue ? issue + '0' : issue,
+    shares:su === '手' && shares ? shares + '0' : shares,
+    unit:'张', converted:true
+  };
+}
+
 function prepareData(raw){
   function fail(msg){ return {ok:false, error:msg}; }
   var v = {};
@@ -894,7 +922,10 @@ function prepareData(raw){
   v.office = v.office || '________';
 
   v.type = raw.type === 'kzz' ? 'kzz' : 'ipo';
-  v.unit = v.type === 'kzz' ? '张' : '股';
+  var normalizedUnits = normalizeKzzUnits((raw.issue || '').trim(), (raw.shares || '').trim(), raw.issueUnit, raw.sharesUnit, v.type);
+  if(!normalizedUnits.ok) return fail(normalizedUnits.error);
+  v.unit = normalizedUnits.unit;
+  v.unitConverted = normalizedUnits.converted;
   v.kindInline = v.type === 'kzz' ? '可转债发行' : '新股发行';
   v.kindAnnoun = v.type === 'kzz' ? '债券发行' : '新股发行';
 
@@ -951,10 +982,11 @@ function prepareData(raw){
   if(!v.notary1) v.notary1 = letter();
   if(!v.notary2) v.notary2 = letter();
 
-  if(!/^\d+$/.test((raw.issue || '').trim()) || Number(raw.issue) <= 0 || (raw.issue || '').trim().length > 12) return fail('网上定价发行量须为 1～12 位正整数');
-  if(!/^\d+$/.test((raw.shares || '').trim()) || Number(raw.shares) <= 0 || (raw.shares || '').trim().length > 12) return fail('每号' + v.unit + '数须为 1～12 位正整数');
-  v.issue = (raw.issue || '').trim().replace(/^0+/, '') || '0';
-  v.shares = (raw.shares || '').trim().replace(/^0+/, '') || '0';
+  var issueStr = normalizedUnits.issue.trim(), sharesStr = normalizedUnits.shares.trim();
+  if(!/^\d+$/.test(issueStr) || Number(issueStr) <= 0 || issueStr.length > 12) return fail('网上定价发行量须为 1～12 位正整数');
+  if(!/^\d+$/.test(sharesStr) || Number(sharesStr) <= 0 || sharesStr.length > 12) return fail('每号' + v.unit + '数须为 1～12 位正整数');
+  v.issue = issueStr.replace(/^0+/, '') || '0';
+  v.shares = sharesStr.replace(/^0+/, '') || '0';
 
   var totalStr = (raw.total || '').trim();
   if(!/^\d+$/.test(totalStr)) return fail('申购配号总数须为正整数');
@@ -966,16 +998,21 @@ function prepareData(raw){
   v.firstDigit = totalStr.charAt(0);
   v.lastDigits = totalStr.slice(1);
 
+  var issueN = Number(v.issue), sharesN = Number(v.shares);
+  if(issueN % sharesN !== 0) return fail('网上定价发行量须能被每号' + v.unit + '数整除，才能计算中签数，请核对输入');
+  var exactWinCount = issueN / sharesN;
   var wc = (raw.winCount || '').trim();
   if(wc){
     if(!/^\d+$/.test(wc) || Number(wc) <= 0 || wc.length > 12) return fail('号码中签数须为 1～12 位正整数（或留空自动计算）');
     v.winCount = wc.replace(/^0+/, '');
     v.winAuto = false;
   }else{
-    v.winCount = String(Math.round(Number(v.issue) / Number(v.shares)));
+    v.winCount = String(exactWinCount);
     v.winAuto = true;
   }
+  if(Number(v.winCount) !== exactWinCount) return fail('号码中签数须等于网上定价发行量÷每号' + v.unit + '数（应为 ' + exactWinCount + ' 个），请核对输入');
   if(Number(v.winCount) <= 0) return fail('号码中签数计算结果须大于 0，请检查发行量与每号' + v.unit + '数');
+  if(Number(v.winCount) > Number(v.total)) return fail('号码中签数不能大于申购配号总数，请核对输入');
 
   v.rangeLower = '0000，0000，0001';
   var rg = (raw.range || '').trim();
@@ -988,6 +1025,10 @@ function prepareData(raw){
 
   var pr = parsePercent(raw.rate);
   if(!pr.ok) return fail(pr.error);
+  var expectedWins = Number(v.total) * Number(pr.normStr) / 100;
+  if(Math.abs(expectedWins - Number(v.winCount)) > 1){
+    return fail('号码中签数与配号总数、中签率不匹配：按中签率计算约为 ' + expectedWins.toFixed(2) + ' 个，当前为 ' + v.winCount + ' 个，请核对输入');
+  }
   v.rateParsed = pr;
   v.rateNorm = pr.normStr;
   v.maxN = Math.min(v.D - 1, 12);           /* 环节只生成到 配号位数-1 */
@@ -1330,9 +1371,9 @@ function buildDocument(v, rounds){
 
 /* 空表状态下的主持稿示意骨架：固定话术照常显示，表单决定的部分一律留白；
    hasIssuer 表示是否已填写发行人嘉宾，未填写时不出现发行人相关话术 */
-function buildSkeletonDoc(type, hasIssuer){
+function buildSkeletonDoc(type, hasIssuer, kzzUnit){
   hasIssuer = !!hasIssuer;
-  var unit = type === 'kzz' ? '张' : '股';
+  var unit = type === 'kzz' ? (kzzUnit === '手' ? '手' : '张') : '股';
   var kindInline = type === 'kzz' ? '可转债发行' : '新股发行';
   var kindAnnoun = type === 'kzz' ? '债券发行' : '新股发行';
   var RB = '________';
@@ -1731,6 +1772,8 @@ if(typeof document !== 'undefined'){
   var fPdfUrl = document.getElementById('fPdfUrl');
   var fPdfFile = document.getElementById('fPdfFile');
   var fType = document.getElementById('fType');
+  var fUnit = document.getElementById('fUnit');
+  var unitField = document.getElementById('unitField');
   var clientBlocks = document.getElementById('clientBlocks');
   var issuerGuestRows = document.getElementById('issuerGuestRows');
   var addClient = document.getElementById('addClient');
@@ -1859,14 +1902,16 @@ if(typeof document !== 'undefined'){
 
   /* ---- 仪式类型联动 ---- */
   function currentType(){ return fType.value === 'kzz' ? 'kzz' : 'ipo'; }
+  function currentUnit(){ return currentType() === 'kzz' ? (fUnit.value === '手' ? '手' : '张') : '股'; }
   function syncTypeLabels(){
-    var u = currentType() === 'kzz' ? '张' : '股';
+    var isKzz = currentType() === 'kzz', u = currentUnit();
+    unitField.style.display = isKzz ? '' : 'none';
     document.getElementById('lblIssue').textContent = '网上定价发行量（' + u + '）';
     document.getElementById('lblShares').textContent = '每 N ' + u + '确定一个申购号';
   }
 
   function collectRaw(){
-    var raw = {type:currentType()};
+    var raw = {type:currentType(), issueUnit:currentUnit(), sharesUnit:currentUnit()};
     Object.keys(SCALAR_FIELDS).forEach(function(k){ raw[k] = document.getElementById(SCALAR_FIELDS[k]).value; });
     raw.clients = readClientBlocks();
     raw.issuerGuests = readGuestRows(issuerGuestRows);
@@ -1907,7 +1952,8 @@ if(typeof document !== 'undefined'){
   }
 
   function generate(){
-    var res = prepareData(collectRaw());
+    var raw = collectRaw();
+    var res = prepareData(raw);
     if(!res.ok){
       errorBox.textContent = res.error;
       outputArea.style.display = 'none';
@@ -1923,6 +1969,7 @@ if(typeof document !== 'undefined'){
     liveState.pinned = liveState.pinned || {};
     liveState.p2Rounds = liveState.p2Rounds || 1;
     liveState.lastRounds = liveState.lastRounds || 1;
+    liveState.raw = raw;
     var doc = buildDocument(v, {p2:liveState.p2Rounds, last:liveState.lastRounds});
     liveDoc = doc;
     buildLiveIndex(doc);
@@ -1946,7 +1993,7 @@ if(typeof document !== 'undefined'){
     var hasIssuer = readGuestRows(issuerGuestRows).some(function(g){
       return !!((g.name || '').trim());
     });
-    var doc = buildSkeletonDoc(currentType(), hasIssuer);
+    var doc = buildSkeletonDoc(currentType(), hasIssuer, currentUnit());
     currentText = docToText(doc);
     currentDocxBlob = docToDocxBlob(doc, undefined, '________');
     currentFileName = '摇号抽签仪式主持稿.docx';
@@ -1966,20 +2013,20 @@ if(typeof document !== 'undefined'){
   var liveGroupMap = {};     /* 数字组前缀 → {N, m, interval} */
   var liveAlert = document.getElementById('liveAlert');
 
-  function liveSig(v){ return [v.company, v.clients.map(function(c){ return c.client; }).join('、'), v.total, v.rateNorm, v.type, v.issue, v.shares, v.winCount].join('|'); }
+  function liveSig(v){ return [v.company, v.clients.map(function(c){ return c.client; }).join('、'), v.total, v.rateNorm, v.type, v.unit, v.issue, v.shares, v.winCount].join('|'); }
 
   function saveLive(){
     if(!liveState) return;
     try{
       sessionStorage.setItem('nssg_live', JSON.stringify({
-        sig:liveState.sig, values:liveState.values, pinned:liveState.pinned,
+        sig:liveState.sig, raw:liveState.raw, values:liveState.values, pinned:liveState.pinned,
         p2Rounds:liveState.p2Rounds, lastRounds:liveState.lastRounds }));
     }catch(e){}
   }
-  function loadLive(sig){
+  function readStoredLive(){
     try{
       var s = JSON.parse(sessionStorage.getItem('nssg_live') || 'null');
-      if(s && s.sig === sig && s.values){
+      if(s && s.values){
         /* 手工篡改存储的轮次上限钳制（防御） */
         s.p2Rounds = Math.min(Math.max(1, s.p2Rounds | 0), 20);
         s.lastRounds = Math.min(Math.max(1, s.lastRounds | 0), 20);
@@ -1987,6 +2034,10 @@ if(typeof document !== 'undefined'){
       }
     }catch(e){}
     return null;
+  }
+  function loadLive(sig){
+    var s = readStoredLive();
+    return s && s.sig === sig ? s : null;
   }
 
   function buildLiveIndex(doc){
@@ -2181,6 +2232,10 @@ if(typeof document !== 'undefined'){
     syncTypeLabels();
     if(generatedOnce) generate(); else renderSkeleton();
   });
+  fUnit.addEventListener('change', function(){
+    syncTypeLabels();
+    if(generatedOnce) generate(); else renderSkeleton();
+  });
   document.querySelector('.input-card').addEventListener('keydown', function(e){
     if(e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
     if(e.target.closest && e.target.closest('.guest-row')) return;              /* 嘉宾行回车不触发生成 */
@@ -2239,11 +2294,13 @@ if(typeof document !== 'undefined'){
   printBtn.addEventListener('click', function(){ if(wxGuard()) return; window.print(); });
 
   /* ---- 公告 PDF 解析（PDF.js 按需从 CDN 加载，主页面保持零依赖） ---- */
+  var PDF_MAX_BYTES = 50 * 1024 * 1024;
+  var PDF_MAX_PAGES = 200;
   var PDFJS_CDNS = [
-    {lib:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-     worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'},
-    {lib:'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-     worker:'https://cdn.bootcdn.net/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
+    {lib:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs',
+     worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs'},
+    {lib:'https://cdn.bootcdn.net/ajax/libs/pdf.js/4.2.67/pdf.min.mjs',
+     worker:'https://cdn.bootcdn.net/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs'}
   ];
   var pdfJsPromise = null;
   function loadPdfJs(){
@@ -2254,16 +2311,12 @@ if(typeof document !== 'undefined'){
       function tryNext(){
         if(i >= PDFJS_CDNS.length){ pdfJsPromise = null; reject(new Error('PDF 解析组件（PDF.js）加载失败，请检查网络后重试')); return; }
         var cdn = PDFJS_CDNS[i++];
-        var s = document.createElement('script');
-        s.src = cdn.lib;
-        s.onload = function(){
-          /* HTTP 200 也可能来自门户劫持/空脚本：没有真正的 PDF.js 时按失败切换 CDN，避免 Promise 永久挂起 */
-          if(!window.pdfjsLib || !window.pdfjsLib.GlobalWorkerOptions){ tryNext(); return; }
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = cdn.worker;
+        import(cdn.lib).then(function(lib){
+          if(!lib || !lib.getDocument || !lib.GlobalWorkerOptions) throw new Error('PDF.js 模块无效');
+          window.pdfjsLib = lib;
+          lib.GlobalWorkerOptions.workerSrc = cdn.worker;
           resolve();
-        };
-        s.onerror = tryNext;
-        document.head.appendChild(s);
+        }).catch(function(){ tryNext(); });
       }
       tryNext();
     });
@@ -2271,7 +2324,10 @@ if(typeof document !== 'undefined'){
   }
 
   function extractPdfText(data){
-    return window.pdfjsLib.getDocument({data:data}).promise.then(function(pdf){
+    return window.pdfjsLib.getDocument({data:data, isEvalSupported:false}).promise.then(function(pdf){
+      if(pdf.numPages > PDF_MAX_PAGES){
+        return pdf.destroy().then(function(){ throw new Error('PDF 页数超过 ' + PDF_MAX_PAGES + ' 页上限'); });
+      }
       var chain = Promise.resolve('');
       for(var p = 1; p <= pdf.numPages; p++){
         (function(pageNo){
@@ -2292,11 +2348,22 @@ if(typeof document !== 'undefined'){
           });
         })(p);
       }
-      return chain;
+      return chain.then(function(text){
+        return pdf.destroy().then(function(){ return text; });
+      },function(err){
+        return pdf.destroy().then(function(){ throw err; });
+      });
     });
   }
 
+  function pdfLimitError(){
+    var err = new Error('PDF 文件超过 50MB 上限，请压缩文件或核对下载内容');
+    err.code = 'PDF_TOO_LARGE';
+    return err;
+  }
   function readFileBuffer(file){
+    if(file.size > PDF_MAX_BYTES) return Promise.reject(pdfLimitError());
+    if(file.size === 0) return Promise.reject(new Error('PDF 文件为空'));
     if(file.arrayBuffer) return file.arrayBuffer();
     return new Promise(function(res, rej){
       var fr = new FileReader();
@@ -2304,6 +2371,36 @@ if(typeof document !== 'undefined'){
       fr.onerror = function(){ rej(new Error('文件读取失败')); };
       fr.readAsArrayBuffer(file);
     });
+  }
+  function readLimitedResponse(resp){
+    var declared = Number(resp.headers.get('Content-Length'));
+    if(declared > PDF_MAX_BYTES){
+      var cancelled = resp.body && resp.body.cancel ? resp.body.cancel().catch(function(){}) : Promise.resolve();
+      return cancelled.then(function(){ throw pdfLimitError(); });
+    }
+    if(!resp.body || !resp.body.getReader){
+      return resp.arrayBuffer().then(function(buf){
+        if(buf.byteLength > PDF_MAX_BYTES) throw pdfLimitError();
+        return buf;
+      });
+    }
+    var reader = resp.body.getReader(), chunks = [], received = 0;
+    function pump(){
+      return reader.read().then(function(part){
+        if(part.done){
+          var out = new Uint8Array(received), offset = 0;
+          chunks.forEach(function(chunk){ out.set(chunk, offset); offset += chunk.byteLength; });
+          return out.buffer;
+        }
+        if(received + part.value.byteLength > PDF_MAX_BYTES){
+          return reader.cancel().catch(function(){}).then(function(){ throw pdfLimitError(); });
+        }
+        chunks.push(part.value);
+        received += part.value.byteLength;
+        return pump();
+      });
+    }
+    return pump();
   }
 
   /* 依次尝试：内置 Worker 代理 → 直连（目标站允许 CORS 时）→ 公共代理；
@@ -2323,6 +2420,7 @@ if(typeof document !== 'undefined'){
       return Promise.race([fetch(u), new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('timeout')); }, ms); })]);
     }
     function validPdf(buf){
+      if(buf.byteLength > PDF_MAX_BYTES) throw pdfLimitError();
       var head = new Uint8Array(buf, 0, Math.min(5, buf.byteLength));
       if(String.fromCharCode.apply(null, head) !== '%PDF-') throw new Error('返回内容不是 PDF');
       return buf;
@@ -2334,9 +2432,13 @@ if(typeof document !== 'undefined'){
       var u = attempts[i++];
       /* 首跳为自建 Worker：25s 后转其他线路（Worker 重试/重定向可能仍在后台继续），其余尝试 15s */
       return timedFetch(u, i === 1 ? 25000 : 15000).then(function(resp){
+        if(resp.status === 413) throw pdfLimitError();
         if(!resp.ok) throw new Error('HTTP ' + resp.status);
-        return resp.arrayBuffer();
-      }).then(validPdf).catch(function(){ return next(); });
+        return readLimitedResponse(resp);
+      }).then(validPdf).catch(function(err){
+        if(err && err.code === 'PDF_TOO_LARGE') throw err;
+        return next();
+      });
     }
     var candidates = [url].concat(alternateUrls || []);
     if(candidates.length > 1){
@@ -2344,9 +2446,13 @@ if(typeof document !== 'undefined'){
       var workerBase = PDF_PROXY.replace(/\/+$/, '') + '/?url=';
       return Promise.all(candidates.map(function(candidate){
         return timedFetch(workerBase + encodeURIComponent(candidate), 25000).then(function(resp){
+          if(resp.status === 413) throw pdfLimitError();
           if(!resp.ok) throw new Error('HTTP ' + resp.status);
-          return resp.arrayBuffer();
-        }).then(validPdf).catch(function(){ return null; });
+          return readLimitedResponse(resp);
+        }).then(validPdf).catch(function(err){
+          if(err && err.code === 'PDF_TOO_LARGE') throw err;
+          return null;
+        });
       })).then(function(buffers){
         for(var bi = 0; bi < buffers.length; bi++) if(buffers[bi]) return buffers[bi];
         return next();
@@ -2381,6 +2487,9 @@ if(typeof document !== 'undefined'){
 
   function applyParsedAnnouncement(r){
     fType.value = r.fields.ceremony;
+    var unitInfo = normalizeKzzUnits(r.fields.issue, r.fields.shares, r.fields.issueUnit, r.fields.sharesUnit, r.fields.ceremony);
+    if(!unitInfo.ok) throw new Error(unitInfo.error);
+    fUnit.value = unitInfo.unit;
     syncTypeLabels();
     document.getElementById('fCompany').value = r.fields.company;
     /* 联席承销商逐块填充；同公司保留手工嘉宾，新增公司补空白嘉宾，消失公司不再带入 */
@@ -2390,8 +2499,8 @@ if(typeof document !== 'undefined'){
       var old = previousClients.filter(function(c){ return c.client === name; })[0];
       return old || {client:name, guestCo:'', guests:[{}]};
     }));
-    document.getElementById('fIssue').value = r.fields.issue;
-    document.getElementById('fShares').value = r.fields.shares;
+    document.getElementById('fIssue').value = unitInfo.issue;
+    document.getElementById('fShares').value = unitInfo.shares;
     document.getElementById('fTotal').value = r.fields.total;
     document.getElementById('fRate').value = r.fields.rate;
     /* 中签数与配号区间均由本次公告派生：清空上一份公告/手工旧值，强制按新数据重新自动计算（嘉宾与公证信息仍保留） */
@@ -2400,10 +2509,11 @@ if(typeof document !== 'undefined'){
     var lines = ['解析成功，已填充以下字段，请核对：',
       '发行公司：' + r.fields.company,
       '主承销商：' + parsedClients.join('、') + (parsedClients.length > 1 ? '（共 ' + parsedClients.length + ' 家）' : ''),
-      '网上定价发行量：' + r.fields.issue + ' ' + (r.fields.issueUnit || '股'),
-      '每号股数/张数：' + r.fields.shares,
+      '网上定价发行量：' + unitInfo.issue + ' ' + unitInfo.unit,
+      '每号申购单位数：' + unitInfo.shares + ' ' + unitInfo.unit,
       '申购配号总数：' + r.fields.total,
       '中签率：' + r.fields.rate + ' %'];
+    if(unitInfo.converted) lines.push('※ 公告中的张/手单位不一致，已按 1 手＝10 张统一转换为张');
     r.notes.forEach(function(n){ lines.push('※ ' + n); });
     lines.push('嘉宾与公证信息需手工补充，确认无误后点「生成主持稿」。');
     setPdfStatus(lines.join('\n'), 'ok');
@@ -2452,10 +2562,27 @@ if(typeof document !== 'undefined'){
     applyParseBtn.style.display = 'none';
   });
 
-  /* 初始：1 家主承销商及 1 位空白嘉宾、标签同步 */
+  function applyRawForm(raw){
+    fType.value = raw.type === 'kzz' ? 'kzz' : 'ipo';
+    fUnit.value = raw.issueUnit === '手' ? '手' : '张';
+    Object.keys(SCALAR_FIELDS).forEach(function(k){
+      if(raw[k] != null) document.getElementById(SCALAR_FIELDS[k]).value = String(raw[k]);
+    });
+    setClientBlocks(Array.isArray(raw.clients) ? raw.clients : [{}]);
+    setGuestRows(issuerGuestRows, Array.isArray(raw.issuerGuests) ? raw.issuerGuests : []);
+    syncTypeLabels();
+  }
+  function restoreLiveSession(){
+    var saved = readStoredLive();
+    if(!saved || !saved.raw){ renderSkeleton(); return; }
+    applyRawForm(saved.raw);
+    generate();
+  }
+
+  /* 初始：1 家主承销商及 1 位空白嘉宾；有会话快照时自动恢复表单、现场号码与轮次 */
   setClientBlocks([{client:'', guestCo:'', guests:[{}]}]);
   syncTypeLabels();
-  renderSkeleton();
+  restoreLiveSession();
 }
 </script>
 </body>
