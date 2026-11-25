@@ -294,6 +294,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   </fieldset>
   <div class="btn-row">
     <button class="btn" id="genBtn" type="button">生成主持稿</button>
+    <button class="btn ghost" id="clearBtn" type="button">清空全部信息</button>
   </div>
   <div class="error" id="errorBox" role="alert"></div>
   <div class="hint">深圳证券信息有限公司为固定承办单位；摇号结果一律留白（下划线）供现场填写；黑色四号加粗＝自动计算填入及强调内容，黑色小四斜体＝现场提示语。</div>
@@ -790,7 +791,7 @@ function parseAnnouncement(rawText){
   /* 网上定价发行量：优先回拨后"网上最终发行数量"；可转债深市以"张"、沪市以"手"计；
      版式差异：股数可能以"万股"（457.8000 万股）或纯"股"（12,497,000 股）表述；
      可转债为"总计为/共/为 X 张（手）"、"Y 元（X 张/手）"或"(为)Y(万)元，即 X 张"（瑞鹄模具式）表述；
-     含"有效申购"字样的句子是申购量而非发行量，逐条跳过并继续向后匹配 */
+     含"有效申购"字样的句子是申购量而非发行量，含"应为"的句子是暂定发行量，均逐条跳过并继续向后匹配最终确定值 */
   var issueRules = [
     {re:/网上最终发行数量[为：:]?([\d,]+(?:\.\d+)?)(万)?股/, unit:'股'},
     {re:/网上向(?:一般)?社会公众投资者(?:发行|发售)[^，。;；]{0,50}?(?:为)?[\d,]+(?:\.\d+)?(?:万)?元，?即([\d,]+)\s*(张|手)/, unit:null, unitIdx:2},
@@ -803,7 +804,7 @@ function parseAnnouncement(rawText){
   for(var i = 0; i < issueRules.length; i++){
     var re = new RegExp(issueRules[i].re.source, 'g'), hit;
     while((hit = re.exec(text))){
-      if(/有效申购/.test(hit[0])) continue;
+      if(/有效申购|应为/.test(hit[0])) continue;
       var v = hit[2] === '万' ? wanToWhole(hit[1]) : cnNum(hit[1]);
       if(v){ fields.issue = v; fields.issueUnit = issueRules[i].unitIdx ? hit[issueRules[i].unitIdx] : issueRules[i].unit; i = issueRules.length; break; }
     }
@@ -1762,13 +1763,17 @@ if(typeof document !== 'undefined'){
   var overviewNote = document.getElementById('overviewNote');
   var scriptDoc = document.getElementById('scriptDoc');
   var genBtn = document.getElementById('genBtn');
+  var clearBtn = document.getElementById('clearBtn');
   var copyBtn = document.getElementById('copyBtn');
   var wordBtn = document.getElementById('wordBtn');
   var printBtn = document.getElementById('printBtn');
   var pdfBtn = document.getElementById('pdfBtn');
   var applyParseBtn = document.getElementById('applyParseBtn');
   var pendingParse = null;   /* 解析期间表单被修改时暂存结果，待用户明确应用 */
+  var parseGeneration = 0;   /* 清空或重新解析时递增，阻止旧异步任务回写 */
   var pdfStatus = document.getElementById('pdfStatus');
+  var defaultPdfStatus = pdfStatus.textContent;
+  var defaultOffice = document.getElementById('fOffice').value;
   var fPdfUrl = document.getElementById('fPdfUrl');
   var fPdfFile = document.getElementById('fPdfFile');
   var fType = document.getElementById('fType');
@@ -1961,15 +1966,10 @@ if(typeof document !== 'undefined'){
     }
     errorBox.textContent = '';
     var v = res.v;
-    /* 现场实时辅助：恢复同签名会话状态（仪式中途刷新不丢），否则全新状态 */
+    /* 每次生成均创建全新现场状态，避免上一场仪式的号码和轮次进入下一场 */
     liveV = v;
     var sig = liveSig(v);
-    liveState = loadLive(sig) || {sig:sig, values:{}, pinned:{}, p2Rounds:1, lastRounds:1};
-    liveState.values = liveState.values || {};
-    liveState.pinned = liveState.pinned || {};
-    liveState.p2Rounds = liveState.p2Rounds || 1;
-    liveState.lastRounds = liveState.lastRounds || 1;
-    liveState.raw = raw;
+    liveState = {sig:sig, values:{}, pinned:{}, p2Rounds:1, lastRounds:1, raw:raw};
     var doc = buildDocument(v, {p2:liveState.p2Rounds, last:liveState.lastRounds});
     liveDoc = doc;
     buildLiveIndex(doc);
@@ -1998,6 +1998,8 @@ if(typeof document !== 'undefined'){
     currentDocxBlob = docToDocxBlob(doc, undefined, '________');
     currentFileName = '摇号抽签仪式主持稿.docx';
     overviewCard.style.display = 'none';
+    overviewTable.innerHTML = '';
+    overviewNote.textContent = '';
     liveAlert.textContent = '';
     liveAlert.style.display = 'none';
     liveV = null; liveState = null; liveDoc = null;
@@ -2014,31 +2016,6 @@ if(typeof document !== 'undefined'){
   var liveAlert = document.getElementById('liveAlert');
 
   function liveSig(v){ return [v.company, v.clients.map(function(c){ return c.client; }).join('、'), v.total, v.rateNorm, v.type, v.unit, v.issue, v.shares, v.winCount].join('|'); }
-
-  function saveLive(){
-    if(!liveState) return;
-    try{
-      sessionStorage.setItem('nssg_live', JSON.stringify({
-        sig:liveState.sig, raw:liveState.raw, values:liveState.values, pinned:liveState.pinned,
-        p2Rounds:liveState.p2Rounds, lastRounds:liveState.lastRounds }));
-    }catch(e){}
-  }
-  function readStoredLive(){
-    try{
-      var s = JSON.parse(sessionStorage.getItem('nssg_live') || 'null');
-      if(s && s.values){
-        /* 手工篡改存储的轮次上限钳制（防御） */
-        s.p2Rounds = Math.min(Math.max(1, s.p2Rounds | 0), 20);
-        s.lastRounds = Math.min(Math.max(1, s.lastRounds | 0), 20);
-        return s;
-      }
-    }catch(e){}
-    return null;
-  }
-  function loadLive(sig){
-    var s = readStoredLive();
-    return s && s.sig === sig ? s : null;
-  }
 
   function buildLiveIndex(doc){
     liveIndex = {};
@@ -2145,7 +2122,6 @@ if(typeof document !== 'undefined'){
       liveAlert.textContent = '';
       liveAlert.style.display = 'none';
     }
-    saveLive();
   }
 
   /* 重建文档（加轮/清空后）：保状态、重渲染 */
@@ -2211,7 +2187,6 @@ if(typeof document !== 'undefined'){
     var where = btn.getAttribute('data-addround');
     if(where === 'p2') liveState.p2Rounds++;
     else liveState.lastRounds++;
-    saveLive();
     rebuildLiveDoc();
     /* 重建后焦点移到新一轮的第一个数字位，防键盘操作丢焦点 */
     var r = where === 'p2' ? liveState.p2Rounds : liveState.lastRounds;
@@ -2220,6 +2195,8 @@ if(typeof document !== 'undefined'){
   });
 
   genBtn.addEventListener('click', generate);
+  clearBtn.addEventListener('click', clearAll);
+  window.addEventListener('pageshow', function(e){ if(e.persisted) clearAll(); });
   addClient.addEventListener('click', function(){ addClientBlock(); });
   addIssuerGuest.addEventListener('click', function(){
     addGuestRow(issuerGuestRows);
@@ -2470,19 +2447,22 @@ if(typeof document !== 'undefined'){
   pdfBtn.addEventListener('click', function(){
     if(pdfBtn.disabled) return;   /* 剪贴板读取窗口期防双入 */
     pdfBtn.disabled = true;
+    var generation = ++parseGeneration;
+    function start(){ if(generation === parseGeneration) runParse(generation); }
     var file = fPdfFile.files && fPdfFile.files[0];
-    if(file){ runParse(); return; }
-    if(fPdfUrl.value.trim()){ runParse(); return; }
+    if(file){ start(); return; }
+    if(fPdfUrl.value.trim()){ start(); return; }
     if(navigator.clipboard && navigator.clipboard.readText){
       navigator.clipboard.readText().then(function(text){
+        if(generation !== parseGeneration) return;
         text = (text || '').trim();
         if(text && !fPdfUrl.value.trim() && (/^https?:\/\//i.test(text) || /cninfo\.com\.cn/i.test(text))){   /* 回调时已被用户手输则不覆盖 */
           fPdfUrl.value = text;
           setPdfStatus('已自动粘贴剪贴板中的公告链接', 'ok');
         }
-        runParse();
-      }, runParse);
-    }else runParse();
+        start();
+      }, start);
+    }else start();
   });
 
   function applyParsedAnnouncement(r){
@@ -2519,7 +2499,8 @@ if(typeof document !== 'undefined'){
     setPdfStatus(lines.join('\n'), 'ok');
   }
 
-  function runParse(){
+  function runParse(generation){
+    if(generation !== parseGeneration) return;
     pendingParse = null;
     applyParseBtn.style.display = 'none';
     var file = fPdfFile.files && fPdfFile.files[0];
@@ -2528,6 +2509,7 @@ if(typeof document !== 'undefined'){
     var parseSnapshot = JSON.stringify(collectRaw());
     setPdfStatus('正在加载 PDF 解析组件…');
     loadPdfJs().then(function(){
+      if(generation !== parseGeneration) return;
       if(file){
         setPdfStatus('正在读取本地文件「' + file.name + '」…');
         return readFileBuffer(file);
@@ -2537,9 +2519,11 @@ if(typeof document !== 'undefined'){
       setPdfStatus('正在抓取 PDF（目标站限制跨域时会自动尝试代理）…\n' + r.url);
       return fetchPdfBytes(r.url, r.alternateUrls);
     }).then(function(buf){
+      if(generation !== parseGeneration) return;
       setPdfStatus('正在解析 PDF 文本…');
       return extractPdfText(buf);
     }).then(function(text){
+      if(generation !== parseGeneration) return;
       var r = parseAnnouncement(text);
       if(!r.ok) throw new Error(r.error);
       /* 抓取期间表单被修改时不静默覆盖：暂存结果，由用户明确点击应用 */
@@ -2551,8 +2535,8 @@ if(typeof document !== 'undefined'){
       }
       applyParsedAnnouncement(r);
     }).catch(function(err){
-      setPdfStatus('解析失败：' + (err && err.message ? err.message : err), 'err');
-    }).then(function(){ pdfBtn.disabled = false; });
+      if(generation === parseGeneration) setPdfStatus('解析失败：' + (err && err.message ? err.message : err), 'err');
+    }).then(function(){ if(generation === parseGeneration) pdfBtn.disabled = false; });
   }
 
   applyParseBtn.addEventListener('click', function(){
@@ -2562,27 +2546,30 @@ if(typeof document !== 'undefined'){
     applyParseBtn.style.display = 'none';
   });
 
-  function applyRawForm(raw){
-    fType.value = raw.type === 'kzz' ? 'kzz' : 'ipo';
-    fUnit.value = raw.issueUnit === '手' ? '手' : '张';
-    Object.keys(SCALAR_FIELDS).forEach(function(k){
-      if(raw[k] != null) document.getElementById(SCALAR_FIELDS[k]).value = String(raw[k]);
-    });
-    setClientBlocks(Array.isArray(raw.clients) ? raw.clients : [{}]);
-    setGuestRows(issuerGuestRows, Array.isArray(raw.issuerGuests) ? raw.issuerGuests : []);
+  function clearAll(){
+    parseGeneration++;
+    try{ sessionStorage.removeItem('nssg_live'); }catch(e){}
+    pendingParse = null;
+    applyParseBtn.style.display = 'none';
+    pdfBtn.disabled = false;
+    fType.value = 'ipo';
+    fUnit.value = '张';
+    fPdfUrl.value = '';
+    fPdfFile.value = '';
+    Object.keys(SCALAR_FIELDS).forEach(function(k){ document.getElementById(SCALAR_FIELDS[k]).value = ''; });
+    document.getElementById('fOffice').value = defaultOffice;
+    setClientBlocks([{client:'', guestCo:'', guests:[{}]}]);
+    setGuestRows(issuerGuestRows, []);
+    liveIndex = {};
+    liveGroupMap = {};
+    errorBox.textContent = '';
     syncTypeLabels();
-  }
-  function restoreLiveSession(){
-    var saved = readStoredLive();
-    if(!saved || !saved.raw){ renderSkeleton(); return; }
-    applyRawForm(saved.raw);
-    generate();
+    setPdfStatus(defaultPdfStatus, '');
+    renderSkeleton();
   }
 
-  /* 初始：1 家主承销商及 1 位空白嘉宾；有会话快照时自动恢复表单、现场号码与轮次 */
-  setClientBlocks([{client:'', guestCo:'', guests:[{}]}]);
-  syncTypeLabels();
-  restoreLiveSession();
+  /* 首次打开、刷新及点击清空均恢复全新状态，不恢复任何上一项目数据 */
+  clearAll();
 }
 </script>
 </body>
