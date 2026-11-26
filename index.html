@@ -122,22 +122,22 @@ tr.total td{background:#f8fbff;font-weight:600}
 tr.hidden-step td{color:var(--muted);background:#fafbfd}
 .ok{color:var(--green)}
 
-/* 主持稿正文：黑白宋体；正文小四、强调四号，预览/打印/Word 共用同一套样式 */
+/* 主持稿正文：黑白宋体；正文五号（10.5pt）、强调 11pt，预览/打印/Word 共用同一套样式 */
 .script-doc{
   padding:34px 38px;
   font-family:SimSun,"宋体","Songti SC",serif;
 }
 .script-doc p{
-  font-size:12pt;line-height:1.0;
+  font-size:10.5pt;line-height:1.0;
   letter-spacing:.06em;
   white-space:pre-wrap;
   overflow-wrap:anywhere;      /* 长下划线/空格串在窄屏可折行，防横向溢出 */
   margin:0 0 4pt;              /* 单倍行距，段后 4pt＝Word w:after=80twips */
 }
-.script-doc .v{color:#000;font-size:14pt;font-weight:700;text-decoration:none}   /* 填入/计算值：黑色四号加粗，无下划线 */
-.script-doc .b{color:#000;font-size:14pt;font-weight:700;text-decoration:none} /* 机号与倒数位次：黑色四号加粗，无下划线 */
-.script-doc .g{color:#000;font-size:12pt;font-style:italic;text-decoration:underline} /* 括号斜体注释：黑色小四斜体下划线 */
-.script-doc .m{color:#000;font-size:12pt}
+.script-doc .v{color:#000;font-size:11pt;font-weight:700;text-decoration:none}   /* 填入/计算值：黑色 11pt 加粗，无下划线 */
+.script-doc .b{color:#000;font-size:11pt;font-weight:700;text-decoration:none} /* 机号与倒数位次：黑色 11pt 加粗，无下划线 */
+.script-doc .g{color:#000;font-size:10.5pt;font-style:italic;text-decoration:underline} /* 括号斜体注释：黑色五号斜体下划线 */
+.script-doc .m{color:#000;font-size:10.5pt}
 
 .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
@@ -198,7 +198,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   table{font-size:.8rem}
   th,td{padding:6px 8px}
   .script-doc{padding:18px 14px}
-  .script-doc p{font-size:12pt;line-height:1.0}
+  .script-doc p{font-size:10.5pt;line-height:1.0}
   /* 窄屏速查表按完整条目折行；取消仅适用于桌面单行的第二行缩进 */
   .page-header .cheat{display:flex;flex-wrap:wrap;gap:3px 10px}
   .page-header .cheat-indent{display:none}
@@ -215,8 +215,8 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
   .container{max-width:none;padding:0}
   .card{border:none;box-shadow:none;padding:0;margin:0}
   .script-doc{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;
-    font-family:SimSun,"宋体","Songti SC",serif}   /* 打印版式严格对齐导出 Word（SimSun 小四） */
-  .script-doc p{font-size:12pt;line-height:1.0;letter-spacing:.06em;margin:0 0 4pt}   /* 段后 4pt = Word w:after=80twips */
+    font-family:SimSun,"宋体","Songti SC",serif}   /* 打印版式严格对齐导出 Word（SimSun 五号） */
+  .script-doc p{font-size:10.5pt;line-height:1.0;letter-spacing:.06em;margin:0 0 4pt}   /* 段后 4pt = Word w:after=80twips */
 }
 </style>
 </head>
@@ -1643,7 +1643,7 @@ function footerXml(){
 }
 
 /* 由文档模型生成真实 .docx：A4、2.5cm 页边距、宋体（SimSun）、单倍行距、文字全黑；
-   正文小四 12pt，强调四号 14pt；R、BD 不加下划线，G 为斜体下划线；
+   正文五号 10.5pt，强调 11pt；R、BD 不加下划线，G 为斜体下划线；
    live run 经 resolve 带当前值（空则留白），addBtn 段整段跳过；主稿单 section，header1/footer1 逐页显示 */
 function docToDocxBlob(doc, resolve, headerTotal){
   function runXml(r){
@@ -1651,12 +1651,12 @@ function docToDocxBlob(doc, resolve, headerTotal){
     var t = escXml(runToText(r, resolve));
     if(!t) return '';
     var emph = r.c === 'r' || r.c === 'b';
-    var sz = emph ? '28' : '24';
+    var sz = emph ? '22' : '21';
     return '<w:r><w:rPr><w:rFonts w:ascii="SimSun" w:eastAsia="SimSun" w:hAnsi="SimSun"/>' +
       (emph ? '<w:b/><w:bCs/>' : '') +
       (r.c === 'g' ? '<w:i/><w:iCs/>' : '') +
       '<w:color w:val="000000"/>' +
-      '<w:spacing w:val="14"/>' +                  /* 字距约 0.06em（小四 12pt×0.06≈0.72pt＝14/20pt） */
+      '<w:spacing w:val="14"/>' +                  /* 字距沿用原稿设置 */
       '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' +
       (r.c === 'g' ? '<w:u w:val="single"/>' : '') +
       '</w:rPr><w:t xml:space="preserve">' + t + '</w:t></w:r>';
@@ -1680,8 +1680,10 @@ function docToDocxBlob(doc, resolve, headerTotal){
     }
     /* brk 标记（末步标题段）：新起一页 */
     var brk = p.some(function(r){ return r.brk; }) ? '<w:pageBreakBefore/>' : '';
-    return '<w:p><w:pPr>' + brk + pBdr + '<w:spacing w:after="80" w:line="240" w:lineRule="auto"/></w:pPr>' +
-      p.map(runXml).join('') + '</w:p>';
+    var content = p.map(runXml).join('');
+    /* 所有段落标记均以五号字为基准，空白段不会继承默认 12pt 撑高页面 */
+    var paraMark = '<w:rPr><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr>';
+    return '<w:p><w:pPr>' + brk + pBdr + '<w:spacing w:after="80" w:line="240" w:lineRule="auto"/>' + paraMark + '</w:pPr>' + content + '</w:p>';
   }).join('');
   var documentXml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
