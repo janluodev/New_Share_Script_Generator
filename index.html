@@ -67,9 +67,9 @@ fieldset .btn-row{margin-top:12px}   /* fieldset 内网格与按钮行的间距�
 .btn.ghost:hover{border-color:var(--blue);background:var(--blue-50)}
 .error{margin-top:12px;color:var(--red);font-size:.9rem;min-height:1.2em}
 .hint{margin-top:12px;color:var(--muted);font-size:.8rem}
-#pdfStatus{white-space:pre-line}
-#pdfStatus.ok{color:var(--green)}
-#pdfStatus.err{color:var(--red)}
+#pdfStatus,#wordDataStatus,#wordGuestStatus{white-space:pre-line}
+#pdfStatus.ok,#wordDataStatus.ok,#wordGuestStatus.ok{color:var(--green)}
+#pdfStatus.err,#wordDataStatus.err,#wordGuestStatus.err{color:var(--red)}
 .fld input[type=file]{padding:0 10px;font-size:.85rem;display:flex;align-items:center}
 .fld input[type=file]::file-selector-button{
   height:30px;margin:0 8px 0 0;padding:0 12px;
@@ -253,6 +253,22 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:26px}
       <button class="btn ghost" id="applyParseBtn" type="button" style="display:none">应用解析结果</button>
     </div>
     <div class="hint" id="pdfStatus" aria-live="polite">可解析：发行公司、主承销商、网上定价发行量、每号申购单位数、配号总数、中签率。单个 PDF 不超过 50MB、200 页。网址抓取受目标站跨域限制，失败时请下载 PDF 后用文件解析。</div>
+  </fieldset>
+  <fieldset>
+    <legend>Word 数据校验（可选）</legend>
+    <div class="grid">
+      <div class="fld"><label for="fDataWordFile">上传发行数据 Word 文档（.doc / .docx）</label><input id="fDataWordFile" type="file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div>
+    </div>
+    <div class="btn-row"><button class="btn ghost" id="wordDataBtn" type="button">校验 Word 数据并修正</button></div>
+    <div class="hint" id="wordDataStatus" aria-live="polite">以数据文档为准校验并修正发行参数，仅支持 OOXML 文档，旧版二进制 .doc 请先另存为 .docx。</div>
+  </fieldset>
+  <fieldset>
+    <legend>嘉宾名单识别（可选）</legend>
+    <div class="grid">
+      <div class="fld"><label for="fGuestWordFile">上传嘉宾名单 Word 文档（.doc / .docx）</label><input id="fGuestWordFile" type="file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div>
+    </div>
+    <div class="btn-row"><button class="btn ghost" id="wordGuestBtn" type="button">识别嘉宾并填充</button></div>
+    <div class="hint" id="wordGuestStatus" aria-live="polite">识别嘉宾名单中的公司、主承销商、姓名、职务和性别，仅支持 OOXML 文档，旧版二进制 .doc 请先另存为 .docx。</div>
   </fieldset>
   <fieldset>
     <legend>公司与委托</legend>
@@ -1160,8 +1176,11 @@ function lastRoundParas(v, r){
   var ballsCn = balls.map(function(b){ return CN_DIGITS[Number(b)]; });
   var lp = 'last_' + r;
   var out = [];
+  var attemptNums = [];
+  for(var ai = 1; ai <= Number(v.firstDigit); ai++) attemptNums.push(String(ai));
+  var attemptText = '次数：' + attemptNums.join('、 ');
   out.push([]);
-  out.push([G('次数：1、 2、 3、 4、 5、 6、 7、 8、 9')]);
+  out.push([G(attemptText)]);
   out.push([]);
   out.push([R('下面我们摇出  第'), LV(lp + '_idx', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码。')]);
   passParas(D - 1, null, lp, true).forEach(function(p){ out.push(p); });
@@ -1180,7 +1199,7 @@ function lastRoundParas(v, r){
   out.push([B('请由'), BD('1'), B('号机摇出倒数第 '), R(String(D)), B(' 位的号码   '), G('（留意摇号情况）')]);
   out.push([B('倒数第 '), R(String(D), false), B(' 位号码已经产生，是'), LV(lp + 'lead', 'num', 15, {N:1})]);
   out.push([]);
-  out.push([G('次数：1、 2、 3、 4、 5、 6、 7、 8、 9')]);
+  out.push([G(attemptText)]);
   out.push([]);
   out.push([R('第', false), LV(lp + '_idx2', 'comp', 5, {r:r}), R('个（最后一个）  ' + D + ' 位数的中签号码已经产生，是', false), LV(lp + 'final', 'num', 22, {N:D})]);
   out.push([]);
@@ -1750,6 +1769,157 @@ function docToDocxBlob(doc, resolve, headerTotal){
   return zipStore(files);
 }
 
+/* ============ Word（OOXML）解析：ZIP、表格、发行数据与嘉宾 ============ */
+
+function zipU16(b, o){ return b[o] | (b[o + 1] << 8); }
+function zipU32(b, o){ return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0; }
+
+function readZipEntry(buffer, name){
+  var bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  if(bytes.length < 22 || bytes[0] !== 0x50 || bytes[1] !== 0x4b){
+    return Promise.reject(new Error('仅支持 OOXML 格式的 Word 文档；旧版二进制 .doc 请先另存为 .docx'));
+  }
+  var eocd = -1;
+  for(var i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--){
+    if(zipU32(bytes, i) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) return Promise.reject(new Error('Word 文档的 ZIP 目录不完整'));
+  var p = zipU32(bytes, eocd + 16);
+  function next(){
+    if(p >= eocd || zipU32(bytes, p) !== 0x02014b50) return Promise.reject(new Error('Word 文档缺少 ' + name));
+    var method = zipU16(bytes, p + 10), compressedSize = zipU32(bytes, p + 20);
+    var nameLen = zipU16(bytes, p + 28), extraLen = zipU16(bytes, p + 30), commentLen = zipU16(bytes, p + 32);
+    var local = zipU32(bytes, p + 42);
+    var entryName = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    if(local >= bytes.length || zipU32(bytes, local) !== 0x04034b50) return Promise.reject(new Error('Word 文档的 ZIP 条目损坏'));
+    var localNameLen = zipU16(bytes, local + 26), localExtraLen = zipU16(bytes, local + 28);
+    var start = local + 30 + localNameLen + localExtraLen;
+    if(start + compressedSize > bytes.length) return Promise.reject(new Error('Word 文档的压缩数据不完整'));
+    var compressed = bytes.subarray(start, start + compressedSize), inflated;
+    if(method === 0) inflated = Promise.resolve(compressed);
+    else if(method === 8){
+      if(typeof DecompressionStream === 'undefined') return Promise.reject(new Error('当前浏览器不支持解压 Word 文档，请使用新版浏览器'));
+      inflated = new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw')))
+        .arrayBuffer().then(function(buf){ return new Uint8Array(buf); });
+    }else return Promise.reject(new Error('暂不支持该 Word 文档的压缩方式'));
+    return inflated.then(function(data){
+      if(entryName === name) return data;
+      p += 46 + nameLen + extraLen + commentLen;
+      return next();
+    });
+  }
+  return next();
+}
+
+function decodeXmlText(s){
+  return s.replace(/&#x([0-9a-f]+);/gi, function(_, h){ return String.fromCodePoint(parseInt(h, 16)); })
+    .replace(/&#(\d+);/g, function(_, d){ return String.fromCodePoint(Number(d)); })
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+
+function xmlText(xml){
+  var s = xml.replace(/<w:tab\b[^>]*\/>/g, '\t').replace(/<w:br\b[^>]*\/>/g, '\n')
+    .replace(/<\/w:p>/g, '\n').replace(/<\/w:tc>/g, '\t').replace(/<\/w:tr>/g, '\n');
+  return decodeXmlText(s.replace(/<[^>]+>/g, '')).replace(/\r/g, '');
+}
+
+function wordTables(xml){
+  var rows = [], trRe = /<w:tr\b[^>]*>[\s\S]*?<\/w:tr>/g, tr;
+  while((tr = trRe.exec(xml))){
+    var cells = [], tcRe = /<w:tc\b[^>]*>[\s\S]*?<\/w:tc>/g, tc;
+    while((tc = tcRe.exec(tr[0]))){
+      var text = xmlText(tc[0]).replace(/\s+/g, ' ').trim();
+      cells.push(text);
+    }
+    if(cells.length) rows.push(cells);
+  }
+  return rows;
+}
+
+function formatRangeUpper(raw){
+  var digits = String(raw || '').replace(/\D/g, '');
+  if(!digits) return '';
+  var p12 = ('000000000000' + digits).slice(-12);
+  return p12.slice(0, 4) + '，' + p12.slice(4, 8) + '，' + p12.slice(8, 12);
+}
+
+function parseWordAnnouncement(xml, fileName){
+  var text = xmlText(xml), rows = wordTables(xml), fields = {};
+  var aliases = {配号总数:'total', 中签号码总数:'winCount', 中签率:'rate', 发行量:'issue', 截止配号:'rangeUpper'};
+  rows.forEach(function(cells){
+    for(var i = 0; i < cells.length - 1; i++){
+      var key = cells[i].replace(/[\s：:]/g, ''), value = cells[i + 1].trim();
+      if(aliases[key] && value){
+        var target = aliases[key];
+        fields[target] = target === 'rate' ? value.replace(/[%％\s]/g, '') :
+          target === 'rangeUpper' ? formatRangeUpper(value) : cnNum(value);
+      }
+    }
+  });
+  if(/IPO/i.test(fileName || '')) fields.ceremony = 'ipo';
+  else if(/KZZ|可转债/i.test(fileName || '') || /向不特定对象发行可转换公司债券|公开发行可转换公司债券/.test(text)) fields.ceremony = 'kzz';
+  else fields.ceremony = 'ipo';
+  fields.issueUnit = fields.ceremony === 'kzz' ? '张' : '股';
+  fields.sharesUnit = fields.issueUnit;
+  if(fields.issue && fields.winCount && !fields.shares){
+    var issueN = Number(fields.issue), winN = Number(fields.winCount);
+    if(issueN > 0 && winN > 0 && issueN % winN === 0) fields.shares = String(issueN / winN);
+  }
+  var rich = parseAnnouncement(text);
+  if(rich.ok) Object.assign(fields, rich.fields);
+  var missing = [];
+  if(!fields.issue) missing.push('网上定价发行量');
+  if(!fields.total) missing.push('申购配号总数');
+  if(!fields.winCount) missing.push('号码中签数');
+  if(!fields.shares) missing.push('每号申购单位数');
+  if(!fields.rate) missing.push('中签率');
+  if(missing.length) return {ok:false, error:'未能从 Word 文档解析出：' + missing.join('、')};
+  return {ok:true, fields:fields, text:text, rows:rows};
+}
+
+function validateWordData(fields){
+  var type = fields.ceremony || 'ipo';
+  var unit = normalizeKzzUnits(fields.issue, fields.shares, fields.issueUnit, fields.sharesUnit, type);
+  if(!unit.ok) return unit;
+  return prepareData({
+    company:'数据校验', office:'', notary1:'', notary2:'', type:type,
+    issue:unit.issue, shares:unit.shares, issueUnit:unit.unit, sharesUnit:unit.unit,
+    total:fields.total, winCount:fields.winCount || '', range:fields.rangeUpper || '', rate:fields.rate,
+    clients:[{client:'数据校验', guestCo:'', guests:[{}]}], issuerGuests:[]
+  });
+}
+
+function parseGuestDocument(xml){
+  var rows = wordTables(xml), clients = [], issuerGuests = [];
+  var issuerGuestCo = '', office = '', notary1 = '', notary2 = '', session = null;
+  rows.forEach(function(cells){
+    var firstCell = cells[0].replace(/\s+/g, '');
+    if(cells.length < 5 || firstCell === '嘉宾' || firstCell === '摇号场次') return;
+    if(session === null) session = cells[0];
+    if(cells[0] && cells[0] !== session) return;
+    var company = cells[1] || '', unit = cells[3] || '', name = cells[4] || '', title = cells[5] || '', gender = cells[6] || '';
+    if(!name) return;
+    if(!issuerGuestCo && company) issuerGuestCo = company;
+    var honor = /女/.test(gender) ? '女士' : '先生';
+    if(/公证/.test(unit) || /公证/.test(title)){
+      if(unit && !office) office = unit;
+      if(title === '公证员'){ if(!notary1) notary1 = name; }
+      else if(!notary2) notary2 = name;
+      return;
+    }
+    var guest = {title:title, name:name, honor:honor};
+    if(company && unit === company) issuerGuests.push(guest);
+    else if(unit){
+      var existingClient = clients.filter(function(c){ return c.client === unit; })[0];
+      if(existingClient) existingClient.guests.push(guest);
+      else clients.push({client:unit, guestCo:unit, guests:[guest]});
+    }
+  });
+  if(!clients.length && !issuerGuests.length) return {ok:false, error:'未能从 Word 文档识别到嘉宾姓名'};
+  return {ok:true, issuerGuestCo:issuerGuestCo, clients:clients, issuerGuests:issuerGuests, office:office, notary1:notary1, notary2:notary2};
+}
+
 /* ============ 页面交互 ============ */
 
 if(typeof document !== 'undefined'){
@@ -1771,6 +1941,14 @@ if(typeof document !== 'undefined'){
   var printBtn = document.getElementById('printBtn');
   var pdfBtn = document.getElementById('pdfBtn');
   var applyParseBtn = document.getElementById('applyParseBtn');
+  var wordDataBtn = document.getElementById('wordDataBtn');
+  var wordGuestBtn = document.getElementById('wordGuestBtn');
+  var fDataWordFile = document.getElementById('fDataWordFile');
+  var fGuestWordFile = document.getElementById('fGuestWordFile');
+  var wordDataStatus = document.getElementById('wordDataStatus');
+  var wordGuestStatus = document.getElementById('wordGuestStatus');
+  var defaultWordDataStatus = wordDataStatus.textContent;
+  var defaultWordGuestStatus = wordGuestStatus.textContent;
   var pendingParse = null;   /* 解析期间表单被修改时暂存结果，待用户明确应用 */
   var parseGeneration = 0;   /* 清空或重新解析时递增，阻止旧异步任务回写 */
   var pdfStatus = document.getElementById('pdfStatus');
@@ -2501,6 +2679,134 @@ if(typeof document !== 'undefined'){
     setPdfStatus(lines.join('\n'), 'ok');
   }
 
+  function wordDataSnapshot(){
+    return {
+      company:document.getElementById('fCompany').value,
+      type:currentType(), unit:currentUnit(),
+      clients:readClientBlocks().map(function(c){ return c.client; }).join('、'),
+      issue:document.getElementById('fIssue').value,
+      shares:document.getElementById('fShares').value,
+      total:document.getElementById('fTotal').value,
+      winCount:document.getElementById('fWinCount').value,
+      range:document.getElementById('fRange').value,
+      rate:document.getElementById('fRate').value
+    };
+  }
+  var WORD_FIELD_LABELS = {company:'发行公司', type:'仪式类型', unit:'计量单位', clients:'主承销商',
+    issue:'网上定价发行量', shares:'每号申购单位数', total:'申购配号总数', winCount:'中签号码总数', range:'配号区间', rate:'中签率'};
+
+  function applyWordAnnouncement(fields){
+    var validation = validateWordData(fields);
+    if(!validation.ok) throw new Error(validation.error);
+    var before = wordDataSnapshot(), type = fields.ceremony || currentType();
+    var unitInfo = normalizeKzzUnits(
+      fields.issue || document.getElementById('fIssue').value,
+      fields.shares || document.getElementById('fShares').value,
+      fields.issueUnit || currentUnit(), fields.sharesUnit || currentUnit(), type);
+    if(!unitInfo.ok) throw new Error(unitInfo.error);
+    fType.value = type;
+    fUnit.value = unitInfo.unit;
+    syncTypeLabels();
+    if(fields.company) document.getElementById('fCompany').value = fields.company;
+    if(fields.clients && fields.clients.length){
+      setClientBlocks(fields.clients.map(function(name, i){ return {client:name, guestCo:'', guests:i === 0 ? [{}] : []}; }));
+    }
+    if(fields.issue) document.getElementById('fIssue').value = unitInfo.issue;
+    if(fields.shares) document.getElementById('fShares').value = unitInfo.shares;
+    if(fields.total) document.getElementById('fTotal').value = fields.total;
+    if(fields.rate) document.getElementById('fRate').value = fields.rate;
+    if(fields.winCount) document.getElementById('fWinCount').value = fields.winCount;
+    else if(fields.issue || fields.shares) document.getElementById('fWinCount').value = '';
+    if(fields.rangeUpper) document.getElementById('fRange').value = fields.rangeUpper;
+    else if(fields.total) document.getElementById('fRange').value = '';
+    var after = wordDataSnapshot(), changed = [];
+    Object.keys(WORD_FIELD_LABELS).forEach(function(k){
+      if(JSON.stringify(before[k]) !== JSON.stringify(after[k])) changed.push(WORD_FIELD_LABELS[k]);
+    });
+    var wasGenerated = generatedOnce;
+    if(wasGenerated) generate(); else renderSkeleton();
+    return {changed:changed, regenerated:wasGenerated};
+  }
+
+  function mergeGuestRows(existing, added){
+    var out = (existing || []).filter(function(g){ return g.name || g.title; });
+    (added || []).forEach(function(g){
+      if(!out.some(function(x){ return x.name === g.name && x.title === g.title && x.honor === g.honor; })) out.push(g);
+    });
+    return out.slice(0, 2);
+  }
+
+  function applyGuestInfo(info){
+    if(info.issuerGuestCo){
+      document.getElementById('fIssuerGuestCo').value = info.issuerGuestCo;
+      if(!document.getElementById('fCompany').value.trim()) document.getElementById('fCompany').value = info.issuerGuestCo;
+    }
+    var existing = readClientBlocks();
+    if(existing.length === 1 && !existing[0].client) existing = [];
+    (info.clients || []).forEach(function(add){
+      var found = existing.filter(function(c){ return c.client === add.client; })[0];
+      if(found){
+        found.guestCo = found.guestCo || add.guestCo;
+        found.guests = mergeGuestRows(found.guests, add.guests);
+      }else existing.push({client:add.client, guestCo:add.guestCo, guests:mergeGuestRows([], add.guests)});
+    });
+    if(!existing.length) existing = [{client:'', guestCo:'', guests:[{}]}];
+    setClientBlocks(existing);
+    setGuestRows(issuerGuestRows, mergeGuestRows(readGuestRows(issuerGuestRows), info.issuerGuests || []));
+    if(info.office) document.getElementById('fOffice').value = info.office;
+    if(info.notary1) document.getElementById('fNotary1').value = info.notary1;
+    if(info.notary2) document.getElementById('fNotary2').value = info.notary2;
+    var wasGenerated = generatedOnce;
+    if(wasGenerated) generate(); else renderSkeleton();
+    var names = [];
+    (info.issuerGuests || []).forEach(function(g){ names.push(g.name); });
+    (info.clients || []).forEach(function(c){ c.guests.forEach(function(g){ names.push(g.name); }); });
+    return {names:names, regenerated:wasGenerated};
+  }
+
+  function setWordStatus(kind, msg, statusKind){
+    var el = kind === 'data' ? wordDataStatus : wordGuestStatus;
+    el.textContent = msg;
+    el.className = 'hint' + (statusKind ? ' ' + statusKind : '');
+  }
+
+  function runWordImport(kind){
+    var input = kind === 'data' ? fDataWordFile : fGuestWordFile;
+    var file = input.files && input.files[0];
+    if(!file){ setWordStatus(kind, '请先选择要解析的 Word 文档', 'err'); return; }
+    var generation = ++parseGeneration;
+    wordDataBtn.disabled = true;
+    wordGuestBtn.disabled = true;
+    setWordStatus(kind, '正在解析 Word 文档…');
+    readFileBuffer(file).then(function(buf){
+      return readZipEntry(buf, 'word/document.xml');
+    }).then(function(bytes){
+      return new TextDecoder().decode(bytes);
+    }).then(function(xml){
+      if(generation !== parseGeneration) return;
+      if(kind === 'data'){
+        var parsed = parseWordAnnouncement(xml, file.name);
+        if(!parsed.ok) throw new Error(parsed.error);
+        var result = applyWordAnnouncement(parsed.fields);
+        setWordStatus(kind, result.changed.length
+          ? '已按 Word 修正：' + result.changed.join('、') + (result.regenerated ? '，并重新生成主持稿' : '，请核对后生成主持稿')
+          : '校验通过：当前数据与 Word 一致', 'ok');
+      }else{
+        var guests = parseGuestDocument(xml);
+        if(!guests.ok) throw new Error(guests.error);
+        var applied = applyGuestInfo(guests);
+        setWordStatus(kind, '已识别并填充 ' + applied.names.length + ' 位嘉宾：' + applied.names.join('、') +
+          (applied.regenerated ? '，已重新生成主持稿' : '，请核对后生成主持稿'), 'ok');
+      }
+    }).catch(function(err){
+      if(generation === parseGeneration) setWordStatus(kind, 'Word 解析失败：' + (err && err.message ? err.message : err), 'err');
+    }).then(function(){
+      if(generation === parseGeneration){ wordDataBtn.disabled = false; wordGuestBtn.disabled = false; }
+    });
+  }
+  wordDataBtn.addEventListener('click', function(){ runWordImport('data'); });
+  wordGuestBtn.addEventListener('click', function(){ runWordImport('guests'); });
+
   function runParse(generation){
     if(generation !== parseGeneration) return;
     pendingParse = null;
@@ -2554,10 +2860,16 @@ if(typeof document !== 'undefined'){
     pendingParse = null;
     applyParseBtn.style.display = 'none';
     pdfBtn.disabled = false;
+    wordDataBtn.disabled = false;
+    wordGuestBtn.disabled = false;
     fType.value = 'ipo';
     fUnit.value = '张';
     fPdfUrl.value = '';
     fPdfFile.value = '';
+    fDataWordFile.value = '';
+    fGuestWordFile.value = '';
+    setWordStatus('data', defaultWordDataStatus, '');
+    setWordStatus('guests', defaultWordGuestStatus, '');
     Object.keys(SCALAR_FIELDS).forEach(function(k){ document.getElementById(SCALAR_FIELDS[k]).value = ''; });
     document.getElementById('fOffice').value = defaultOffice;
     setClientBlocks([{client:'', guestCo:'', guests:[{}]}]);
